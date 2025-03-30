@@ -84,15 +84,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // For demo, we'll accept any email/password
-      const mockUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: email.split('@')[0], // Extract name from email for demo
-        email
-      };
+      // For demo, we'll check if there's a stored user first
+      const storedUser = localStorage.getItem('mindboost_user');
+      if (!storedUser) {
+        throw new Error('No user found. Please sign up first.');
+      }
       
-      localStorage.setItem('mindboost_user', JSON.stringify(mockUser));
-      setUser(mockUser);
+      const userData = JSON.parse(storedUser);
+      // In a real app, we would validate the email and password
+      // For demo, just check if the email matches
+      if (userData.email !== email) {
+        throw new Error('Invalid email or password.');
+      }
+      
+      setUser(userData);
       
       toast({
         title: "Welcome to MindBoost!",
@@ -101,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Invalid email or password.",
+        description: error instanceof Error ? error.message : "Invalid email or password.",
         variant: "destructive",
       });
       throw error;

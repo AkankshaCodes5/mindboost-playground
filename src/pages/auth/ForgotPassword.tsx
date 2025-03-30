@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, ArrowLeft } from 'lucide-react';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -88,20 +87,15 @@ const ForgotPassword = () => {
                 <label htmlFor="email" className="block text-sm font-medium text-mindboost-dark">
                   Email
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your registered email"
-                    className="mindboost-input pl-10"
-                    required
-                  />
-                </div>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your registered email"
+                  className="mindboost-input"
+                  required
+                />
               </div>
 
               <button
@@ -122,7 +116,7 @@ const ForgotPassword = () => {
         {!isSubmitted && (
           <div className="text-center mt-6">
             <Link to="/signin" className="flex items-center justify-center text-mindboost-primary font-medium hover:underline">
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <span className="mr-1">←</span>
               Back to Log In
             </Link>
           </div>
