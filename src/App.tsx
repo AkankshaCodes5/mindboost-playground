@@ -91,7 +91,7 @@ const App = () => (
                 </PrivateRoute>
               } />
               
-              <Route path="/" element={<Navigate to="/splash" replace />} />
+              <Route path="/" element={<Navigate to="/signup" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

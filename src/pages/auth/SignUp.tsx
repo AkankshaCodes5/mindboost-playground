@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User } from 'lucide-react';
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -80,80 +79,60 @@ const SignUp = () => {
               <label htmlFor="name" className="block text-sm font-medium text-mindboost-dark">
                 Name
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <User className="w-5 h-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="mindboost-input pl-10"
-                  required
-                />
-              </div>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                className="mindboost-input"
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-mindboost-dark">
                 Email
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="mindboost-input pl-10"
-                  required
-                />
-              </div>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="mindboost-input"
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-medium text-mindboost-dark">
                 Password
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Lock className="w-5 h-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
-                  className="mindboost-input pl-10"
-                  required
-                />
-              </div>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                className="mindboost-input"
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-mindboost-dark">
                 Confirm Password
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Lock className="w-5 h-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your password"
-                  className="mindboost-input pl-10"
-                  required
-                />
-              </div>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
+                className="mindboost-input"
+                required
+              />
               {passwordError && (
                 <p className="text-red-500 text-sm mt-1">{passwordError}</p>
               )}
