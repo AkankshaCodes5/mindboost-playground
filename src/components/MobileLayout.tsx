@@ -34,15 +34,24 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
       <header className="sticky top-0 z-10 bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center">
-            {showBack && (
+            {showBack ? (
               <button 
                 onClick={handleBack}
                 className="p-2 mr-2 rounded-full hover:bg-mindboost-lightGray"
               >
                 <ArrowLeft className="w-5 h-5 text-mindboost-dark" />
               </button>
+            ) : (
+              <div className="flex items-center">
+                <img
+                  src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png"
+                  alt="MindBoost"
+                  className="h-8 w-8 mr-2"
+                />
+                <span className="text-lg font-semibold text-mindboost-dark">MindBoost</span>
+              </div>
             )}
-            <h1 className="text-lg font-semibold text-mindboost-dark">{title}</h1>
+            {showBack && <h1 className="text-lg font-semibold text-mindboost-dark">{title}</h1>}
           </div>
           
           {showProfile && (

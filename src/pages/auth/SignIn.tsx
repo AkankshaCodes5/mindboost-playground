@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -31,24 +31,34 @@ const SignIn = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-mindboost-lightGray">
+    <div className="flex flex-col items-center min-h-screen p-4 bg-mindboost-lightGray">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="w-full flex justify-center mt-6 mb-8"
+      >
+        <div className="text-center">
+          <img 
+            src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
+            alt="MindBoost Logo" 
+            className="w-32 h-32 mx-auto"
+          />
+          <h1 className="text-3xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
+          <p className="text-mindboost-primary text-lg">RELAX. FOCUS. ACHIEVE</p>
+        </div>
+      </motion.div>
+
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
         className="w-full max-w-md"
       >
-        <div className="flex flex-col items-center mb-8">
-          <img 
-            src="/lovable-uploads/af555517-cc4b-4ad8-940f-573166787707.png" 
-            alt="MindBoost Logo" 
-            className="w-24 h-24 mb-4"
-          />
-          <h1 className="text-2xl font-bold text-mindboost-dark">Welcome Back</h1>
-          <p className="text-mindboost-gray">Sign in to your MindBoost account</p>
-        </div>
-
         <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Welcome Back</h2>
+          <p className="text-mindboost-gray text-center mb-6">Sign in to your MindBoost account</p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-medium text-mindboost-dark">

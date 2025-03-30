@@ -25,7 +25,7 @@ const SplashScreen = () => {
         className="flex flex-col items-center"
       >
         <img 
-          src="/lovable-uploads/af555517-cc4b-4ad8-940f-573166787707.png" 
+          src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
           alt="MindBoost Logo" 
           className="w-48 h-48 mb-4"
         />
