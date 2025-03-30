@@ -61,8 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(newUser);
       
       toast({
-        title: "Success!",
-        description: "Welcome to MindBoost!",
+        title: "Welcome to MindBoost!",
+        description: "Your account has been created successfully.",
       });
     } catch (error) {
       toast({
@@ -95,8 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(mockUser);
       
       toast({
-        title: "Success!",
-        description: "Welcome back to MindBoost!",
+        title: "Welcome to MindBoost!",
+        description: "You have successfully logged in.",
       });
     } catch (error) {
       toast({

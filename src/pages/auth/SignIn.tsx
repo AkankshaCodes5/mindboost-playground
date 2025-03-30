@@ -42,10 +42,10 @@ const SignIn = () => {
           <img 
             src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
             alt="MindBoost Logo" 
-            className="w-32 h-32 mx-auto"
+            className="w-36 h-36 mx-auto"
           />
-          <h1 className="text-3xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
-          <p className="text-mindboost-primary text-lg">RELAX. FOCUS. ACHIEVE</p>
+          <h1 className="text-4xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
+          <p className="text-mindboost-primary text-lg mt-1">RELAX. FOCUS. ACHIEVE</p>
         </div>
       </motion.div>
 
@@ -56,8 +56,8 @@ const SignIn = () => {
         className="w-full max-w-md"
       >
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Welcome Back</h2>
-          <p className="text-mindboost-gray text-center mb-6">Sign in to your MindBoost account</p>
+          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Log In</h2>
+          <p className="text-mindboost-gray text-center mb-6">Enter your email & password to log in</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -114,7 +114,7 @@ const SignIn = () => {
               {isSubmitting ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
               ) : (
-                'Sign In'
+                'Log In'
               )}
             </button>
           </form>

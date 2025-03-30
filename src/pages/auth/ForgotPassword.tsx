@@ -31,29 +31,39 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-mindboost-lightGray">
+    <div className="flex flex-col items-center min-h-screen p-4 bg-mindboost-lightGray">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="w-full flex justify-center mt-6 mb-8"
+      >
+        <div className="text-center">
+          <img 
+            src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
+            alt="MindBoost Logo" 
+            className="w-36 h-36 mx-auto"
+          />
+          <h1 className="text-4xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
+          <p className="text-mindboost-primary text-lg mt-1">RELAX. FOCUS. ACHIEVE</p>
+        </div>
+      </motion.div>
+
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
         className="w-full max-w-md"
       >
-        <div className="flex flex-col items-center mb-8">
-          <img 
-            src="/lovable-uploads/af555517-cc4b-4ad8-940f-573166787707.png" 
-            alt="MindBoost Logo" 
-            className="w-24 h-24 mb-4"
-          />
-          <h1 className="text-2xl font-bold text-mindboost-dark">Forgot Password</h1>
-          <p className="text-mindboost-gray text-center">
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Forgot Password</h2>
+          <p className="text-mindboost-gray text-center mb-6">
             {isSubmitted 
               ? "Password reset link sent to your email" 
-              : "Enter your email and we'll send you a reset link"
+              : "Enter your registered email to receive a reset link"
             }
           </p>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
           {isSubmitted ? (
             <div className="text-center py-6">
               <div className="mb-4 mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -69,7 +79,7 @@ const ForgotPassword = () => {
                 onClick={() => navigate('/signin')}
                 className="mindboost-button"
               >
-                Back to Sign In
+                Back to Log In
               </button>
             </div>
           ) : (
@@ -113,7 +123,7 @@ const ForgotPassword = () => {
           <div className="text-center mt-6">
             <Link to="/signin" className="flex items-center justify-center text-mindboost-primary font-medium hover:underline">
               <ArrowLeft className="w-4 h-4 mr-1" />
-              Back to Sign In
+              Back to Log In
             </Link>
           </div>
         )}
