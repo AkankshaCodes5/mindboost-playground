@@ -1,0 +1,202 @@
+
+import { useState, useEffect } from 'react';
+import MobileLayout from '../../components/MobileLayout';
+import { useProgress } from '../../contexts/ProgressContext';
+import { useToast } from "@/components/ui/use-toast";
+import { motion } from 'framer-motion';
+import { Droplet, Settings, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+
+const WaterTracker = () => {
+  const { 
+    dailyWaterGoal, 
+    setDailyWaterGoal, 
+    addWaterLog, 
+    getTotalWaterToday, 
+    getWaterPercentage,
+    waterLogs
+  } = useProgress();
+  
+  const [showSettings, setShowSettings] = useState(false);
+  const [newGoal, setNewGoal] = useState(dailyWaterGoal);
+  const [waterAmount, setWaterAmount] = useState(200);
+  const [totalWater, setTotalWater] = useState(0);
+  const [percentage, setPercentage] = useState(0);
+  
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setTotalWater(getTotalWaterToday());
+    setPercentage(getWaterPercentage());
+  }, [getTotalWaterToday, getWaterPercentage, waterLogs]);
+
+  const handleAddWater = () => {
+    addWaterLog(waterAmount);
+    
+    toast({
+      title: "Water Added",
+      description: `Added ${waterAmount}ml to your daily intake.`,
+    });
+    
+    setTotalWater(prev => prev + waterAmount);
+    setPercentage(Math.min(100, Math.round(((totalWater + waterAmount) / dailyWaterGoal) * 100)));
+  };
+
+  const handleSaveGoal = () => {
+    setDailyWaterGoal(newGoal);
+    setShowSettings(false);
+    
+    toast({
+      title: "Goal Updated",
+      description: `Your daily water goal is now ${newGoal}ml.`,
+    });
+    
+    // Recalculate percentage
+    setPercentage(Math.min(100, Math.round((totalWater / newGoal) * 100)));
+  };
+
+  const increaseWaterAmount = () => {
+    setWaterAmount(prev => Math.min(prev + 50, 500));
+  };
+
+  const decreaseWaterAmount = () => {
+    setWaterAmount(prev => Math.max(prev - 50, 50));
+  };
+
+  const getMotivationalMessage = () => {
+    if (percentage < 25) {
+      return "You're just getting started! Keep drinking water.";
+    } else if (percentage < 50) {
+      return "Nice progress! Staying hydrated improves concentration.";
+    } else if (percentage < 75) {
+      return "Well done! You're more than halfway to your goal.";
+    } else if (percentage < 100) {
+      return "Almost there! A hydrated brain functions better.";
+    } else {
+      return "Congratulations! You've reached your daily water goal!";
+    }
+  };
+
+  return (
+    <MobileLayout title="Water Tracker">
+      <div className="p-4">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-2xl font-bold text-mindboost-dark">Water Tracker</h1>
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <Settings className="w-5 h-5 text-mindboost-dark" />
+            </button>
+          </div>
+          <p className="text-gray-500">
+            Track your daily water intake for better brain performance
+          </p>
+        </div>
+        
+        {/* Settings panel */}
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl shadow-sm p-4 mb-6"
+          >
+            <h3 className="font-medium mb-3">Daily Water Goal</h3>
+            <div className="flex items-center">
+              <input
+                type="number"
+                value={newGoal}
+                onChange={(e) => setNewGoal(Math.max(500, parseInt(e.target.value) || 0))}
+                className="mindboost-input w-24 text-center"
+                min="500"
+                step="100"
+              />
+              <span className="ml-2">ml</span>
+              <button
+                onClick={handleSaveGoal}
+                className="ml-4 bg-mindboost-primary text-white px-3 py-1 rounded-md text-sm"
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Recommended daily water intake: 2000ml - 3000ml
+            </p>
+          </motion.div>
+        )}
+        
+        {/* Water glass visualization */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative mb-6">
+            <div className="water-glass">
+              <motion.div
+                initial={{ height: '0%' }}
+                animate={{ height: `${percentage}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="water-fill"
+              />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center text-mindboost-dark font-bold text-xl">
+              {percentage}%
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <p className="font-semibold text-lg text-mindboost-dark">
+              {totalWater} / {dailyWaterGoal} ml
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {getMotivationalMessage()}
+            </p>
+          </div>
+        </div>
+        
+        {/* Add water section */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <h3 className="font-medium mb-3">Add Water</h3>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={decreaseWaterAmount}
+              className="p-2 rounded-full bg-gray-100"
+              disabled={waterAmount <= 50}
+            >
+              <ChevronDown className="w-5 h-5 text-mindboost-dark" />
+            </button>
+            <div className="flex items-center">
+              <Droplet className="w-5 h-5 mr-2 text-blue-500" />
+              <span className="text-xl font-bold">{waterAmount} ml</span>
+            </div>
+            <button
+              onClick={increaseWaterAmount}
+              className="p-2 rounded-full bg-gray-100"
+              disabled={waterAmount >= 500}
+            >
+              <ChevronUp className="w-5 h-5 text-mindboost-dark" />
+            </button>
+          </div>
+          <button
+            onClick={handleAddWater}
+            className="w-full flex items-center justify-center mindboost-button"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Water
+          </button>
+        </div>
+        
+        {/* Benefits section */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h3 className="font-semibold mb-2">Benefits of Hydration</h3>
+          <ul className="space-y-2 text-gray-600 text-sm">
+            <li>• Improves cognitive performance</li>
+            <li>• Enhances memory function</li>
+            <li>• Regulates mood and reduces stress</li>
+            <li>• Maintains concentration and alertness</li>
+            <li>• Helps prevent headaches</li>
+          </ul>
+        </div>
+      </div>
+    </MobileLayout>
+  );
+};
+
+export default WaterTracker;

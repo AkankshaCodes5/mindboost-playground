@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+        // MindBoost custom colors
+        mindboost: {
+          primary: '#4A9B9C', // Teal color from logo
+          secondary: '#3B7C7D', // Darker teal
+          light: '#A9D5D6', // Light teal
+          dark: '#333333', // Dark gray from logo
+          gray: '#666666', // Medium gray
+          lightGray: '#F5F5F5' // Light gray for backgrounds
+        }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +94,28 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+        // Custom keyframes for breathing animation
+        'breathe-in': {
+          '0%': { transform: 'scale(1)', opacity: '0.7' },
+          '100%': { transform: 'scale(1.3)', opacity: '1' }
+        },
+        'breathe-out': {
+          '0%': { transform: 'scale(1.3)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '0.7' }
+        },
+        // Custom keyframes for water filling animation
+        'fill-water': {
+          '0%': { height: '0%' },
+          '100%': { height: '100%' }
+        }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+        'breathe-in': 'breathe-in 5s ease-in-out',
+        'breathe-out': 'breathe-out 5s ease-in-out',
+        'fill-water': 'fill-water 2s ease-out forwards'
 			}
 		}
 	},
