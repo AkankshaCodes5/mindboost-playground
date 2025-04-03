@@ -5,65 +5,65 @@
 
 @layer base {
   :root {
-    --background: 180 10% 95%;
-    --foreground: 180 10% 10%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 180 10% 10%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 180 10% 10%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 180 37% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 180 37% 35%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 180 10% 90%;
-    --muted-foreground: 180 10% 40%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 180 37% 75%;
-    --accent-foreground: 180 10% 10%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 180 10% 85%;
-    --input: 180 10% 85%;
-    --ring: 180 37% 45%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 180 10% 10%;
-    --foreground: 180 10% 95%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 180 10% 15%;
-    --card-foreground: 180 10% 95%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 180 10% 15%;
-    --popover-foreground: 180 10% 95%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 180 37% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 180 37% 35%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 180 10% 20%;
-    --muted-foreground: 180 10% 60%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 180 37% 25%;
-    --accent-foreground: 180 10% 95%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 180 10% 20%;
-    --input: 180 10% 20%;
-    --ring: 180 37% 45%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -73,56 +73,72 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Custom styles for MindBoost app */
 .mindboost-container {
-  @apply flex flex-col min-h-screen bg-background;
+  max-width: 100%;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
 }
 
-.mindboost-card {
-  @apply bg-white rounded-xl shadow-md p-4 transition-all duration-300;
+/* Mobile app specific styles */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  body {
+    /* Ensure content doesn't start under status bar on iOS */
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+  
+  .mindboost-container {
+    padding-top: env(safe-area-inset-top, 0);
+  }
 }
 
-.mindboost-button {
-  @apply bg-mindboost-primary text-white rounded-lg py-3 px-6 font-medium hover:bg-mindboost-secondary transition-colors duration-300 flex items-center justify-center;
+.mindboost-primary {
+  color: #4a6da7;
+}
+
+.mindboost-secondary {
+  color: #84b0c7;
+}
+
+.mindboost-dark {
+  color: #2d3748;
+}
+
+.mindboost-light {
+  color: #f7fafc;
+}
+
+.bg-mindboost-primary {
+  background-color: #4a6da7;
+}
+
+.bg-mindboost-secondary {
+  background-color: #84b0c7;
+}
+
+.bg-mindboost-lightGray {
+  background-color: #f8f9fa;
 }
 
 .mindboost-input {
-  @apply bg-mindboost-lightGray border border-mindboost-light rounded-lg px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-mindboost-primary transition-all duration-300;
+  @apply w-full rounded-md border border-gray-300 bg-white py-2 px-4 text-gray-700 focus:border-mindboost-primary focus:outline-none focus:ring-2 focus:ring-mindboost-primary focus:ring-opacity-20 transition-colors duration-200;
 }
 
-/* Card flip animation for memory game */
-.card-flip {
-  @apply relative transition-transform duration-500 transform-gpu;
-  transform-style: preserve-3d;
+.mindboost-button {
+  @apply w-full rounded-md bg-mindboost-primary py-2 px-4 font-medium text-white hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-mindboost-primary focus:ring-opacity-50 active:bg-opacity-80 transition-colors duration-200 disabled:opacity-50;
 }
 
-.card-flip.flipped {
-  transform: rotateY(180deg);
-}
-
-.card-front, .card-back {
-  @apply absolute w-full h-full backface-hidden;
-}
-
-.card-back {
-  transform: rotateY(180deg);
-}
-
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-/* Water glass styles */
-.water-glass {
-  @apply relative w-32 h-40 bg-transparent mx-auto rounded-b-3xl rounded-t-lg border-2 border-mindboost-primary overflow-hidden;
-}
-
-.water-fill {
-  @apply absolute bottom-0 left-0 right-0 bg-mindboost-light rounded-b-3xl;
-  transition: height 1s ease-out;
+/* Additional styles to handle mobile layout */
+input, button, a {
+  touch-action: manipulation;
 }

@@ -16,7 +16,7 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
   const { signOut } = useAuth();
 
   const handleBack = () => {
-    navigate(-1);
+    navigate('/dashboard');
   };
 
   const handleProfile = () => {
@@ -29,7 +29,7 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
   };
 
   return (
-    <div className="mindboost-container">
+    <div className="mindboost-container flex flex-col min-h-screen w-full bg-mindboost-lightGray">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
@@ -38,6 +38,7 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
               <button 
                 onClick={handleBack}
                 className="p-2 mr-2 rounded-full hover:bg-mindboost-lightGray"
+                aria-label="Go back to dashboard"
               >
                 <ArrowLeft className="w-5 h-5 text-mindboost-dark" />
               </button>
@@ -59,12 +60,14 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
               <button 
                 onClick={handleProfile}
                 className="p-2 rounded-full hover:bg-mindboost-lightGray mr-2"
+                aria-label="Go to profile"
               >
                 <User className="w-5 h-5 text-mindboost-dark" />
               </button>
               <button 
                 onClick={handleSignOut}
                 className="p-2 rounded-full hover:bg-mindboost-lightGray"
+                aria-label="Sign out"
               >
                 <LogOut className="w-5 h-5 text-mindboost-dark" />
               </button>
