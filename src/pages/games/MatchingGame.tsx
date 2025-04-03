@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -31,12 +30,10 @@ const MatchingGame = () => {
   const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁', '🐯', '🐮'];
 
   const initializeGame = () => {
-    // Select 6 random emojis and create pairs
     const selectedEmojis = [...emojis]
       .sort(() => 0.5 - Math.random())
       .slice(0, 6);
     
-    // Create pairs and shuffle
     const cardPairs = [...selectedEmojis, ...selectedEmojis]
       .sort(() => 0.5 - Math.random())
       .map((value, index) => ({
@@ -60,16 +57,12 @@ const MatchingGame = () => {
   }, []);
 
   useEffect(() => {
-    // Check if we have 2 flipped cards
     if (flippedCards.length === 2) {
-      // Increase attempts
       setAttempts(prev => prev + 1);
       
       const [firstIndex, secondIndex] = flippedCards;
       
-      // Check if cards match
       if (cards[firstIndex].value === cards[secondIndex].value) {
-        // Mark cards as matched
         setCards(prev => 
           prev.map(card => 
             card.id === firstIndex || card.id === secondIndex
@@ -80,7 +73,6 @@ const MatchingGame = () => {
         setMatchedPairs(prev => prev + 1);
         setFlippedCards([]);
       } else {
-        // Flip cards back after a delay
         setTimeout(() => {
           setCards(prev => 
             prev.map(card => 
@@ -96,17 +88,14 @@ const MatchingGame = () => {
   }, [flippedCards, cards]);
 
   useEffect(() => {
-    // Check if game is complete (all pairs matched)
     if (gameStarted && matchedPairs === 6) {
       const endTimeValue = Date.now();
       setEndTime(endTimeValue);
       setGameComplete(true);
       
-      // Calculate score (lower attempts is better)
-      const duration = (endTimeValue - startTime) / 1000; // seconds
-      const score = Math.max(100 - (attempts - 6) * 10, 10); // 100 - penalty for extra attempts, minimum 10
+      const duration = (endTimeValue - startTime) / 1000;
+      const score = Math.max(100 - (attempts - 6) * 10, 10);
       
-      // Save score
       addGameScore('matching', score, duration);
       
       toast({
@@ -117,7 +106,6 @@ const MatchingGame = () => {
   }, [matchedPairs, attempts, gameStarted, startTime, addGameScore, toast]);
 
   const handleCardClick = (id: number) => {
-    // Ignore if game complete, card already flipped or already 2 cards flipped
     if (
       gameComplete ||
       cards[id].flipped ||
@@ -127,7 +115,6 @@ const MatchingGame = () => {
       return;
     }
     
-    // Flip card
     setCards(prev => 
       prev.map(card => 
         card.id === id
@@ -136,7 +123,6 @@ const MatchingGame = () => {
       )
     );
     
-    // Add to flipped cards
     setFlippedCards(prev => [...prev, id]);
   };
 
@@ -172,7 +158,6 @@ const MatchingGame = () => {
             >
               <div className={`card-flip ${card.flipped || card.matched ? 'flipped' : ''} w-full h-full`}>
                 <div className="card-front backface-hidden bg-mindboost-primary flex items-center justify-center text-white text-2xl font-bold">
-                  ?
                 </div>
                 <div className="card-back backface-hidden flex items-center justify-center text-4xl">
                   {card.value}

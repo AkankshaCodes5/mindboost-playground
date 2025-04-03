@@ -31,7 +31,7 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
   return (
     <div className="mindboost-container flex flex-col min-h-screen w-full bg-mindboost-lightGray">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white shadow-sm">
+      <header className="sticky top-0 z-10 bg-white shadow-sm pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center">
             {showBack ? (
