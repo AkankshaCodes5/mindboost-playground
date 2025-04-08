@@ -77,12 +77,19 @@
   }
 }
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 .mindboost-container {
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
-  height: 100%;
-  min-height: 100vh;
+  height: 100vh;
   overflow-x: hidden;
   position: relative;
 }
@@ -117,6 +124,16 @@
 
 .pr-safe {
   padding-right: env(safe-area-inset-right, 0);
+}
+
+.section-padding {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .section-padding {
+    padding: 1.5rem;
+  }
 }
 
 .mindboost-primary {
@@ -160,6 +177,12 @@ input, button, a {
   touch-action: manipulation;
 }
 
+/* Card styles with responsive adjustments */
+.mindboost-card {
+  @apply bg-white rounded-xl shadow-sm p-4 transition-all;
+  margin-bottom: 0.75rem;
+}
+
 /* Card flip animation styles */
 .card-flip {
   position: relative;
@@ -186,4 +209,28 @@ input, button, a {
 
 .card-back {
   transform: rotateY(180deg);
+}
+
+/* Responsive grid adjustments */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Fix for App.css that might be interfering with mobile layout */
+#root {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
