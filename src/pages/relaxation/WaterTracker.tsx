@@ -6,7 +6,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion } from 'framer-motion';
 import { Droplet, Settings, Plus, ChevronUp, ChevronDown } from 'lucide-react';
 import { Slider } from "@/components/ui/slider";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const WaterTracker = () => {
   const { 
@@ -23,7 +22,6 @@ const WaterTracker = () => {
   const [waterAmount, setWaterAmount] = useState(200);
   const [totalWater, setTotalWater] = useState(0);
   const [percentage, setPercentage] = useState(0);
-  const [goalInputMode, setGoalInputMode] = useState<'type' | 'slider'>('type');
   
   const { toast } = useToast();
 
@@ -112,68 +110,36 @@ const WaterTracker = () => {
           >
             <h3 className="font-medium mb-3">Daily Water Goal</h3>
             
-            {/* Input selection mode */}
-            <div className="mb-4">
-              <RadioGroup 
-                value={goalInputMode} 
-                onValueChange={(val) => setGoalInputMode(val as 'type' | 'slider')}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="type" id="input-type" />
-                  <label htmlFor="input-type">Type</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="slider" id="input-slider" />
-                  <label htmlFor="input-slider">Select</label>
-                </div>
-              </RadioGroup>
+            <div className="mb-4 space-y-4">
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>500ml</span>
+                <span>4000ml</span>
+              </div>
+              <Slider
+                min={500}
+                max={4000}
+                step={100}
+                value={[newGoal]}
+                onValueChange={handleSliderChange}
+              />
+              <div className="text-center font-medium">{newGoal}ml</div>
+              
+              <div className="grid grid-cols-5 gap-2 mt-3">
+                {predefinedGoals.map(goal => (
+                  <button
+                    key={goal}
+                    onClick={() => setNewGoal(goal)}
+                    className={`text-xs py-1 px-2 rounded-md ${
+                      newGoal === goal 
+                        ? 'bg-mindboost-primary text-white' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {goal}ml
+                  </button>
+                ))}
+              </div>
             </div>
-            
-            {goalInputMode === 'type' ? (
-              <div className="flex items-center mb-4">
-                <input
-                  type="number"
-                  value={newGoal}
-                  onChange={(e) => setNewGoal(Math.max(500, parseInt(e.target.value) || 0))}
-                  className="mindboost-input w-24 text-center"
-                  min="500"
-                  step="100"
-                />
-                <span className="ml-2">ml</span>
-              </div>
-            ) : (
-              <div className="mb-4 space-y-4">
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>500ml</span>
-                  <span>4000ml</span>
-                </div>
-                <Slider
-                  min={500}
-                  max={4000}
-                  step={100}
-                  value={[newGoal]}
-                  onValueChange={handleSliderChange}
-                />
-                <div className="text-center font-medium">{newGoal}ml</div>
-                
-                <div className="grid grid-cols-5 gap-2 mt-3">
-                  {predefinedGoals.map(goal => (
-                    <button
-                      key={goal}
-                      onClick={() => setNewGoal(goal)}
-                      className={`text-xs py-1 px-2 rounded-md ${
-                        newGoal === goal 
-                          ? 'bg-mindboost-primary text-white' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {goal}ml
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             
             <div className="flex justify-end">
               <button
