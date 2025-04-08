@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -77,6 +78,17 @@
     width: 100%;
     overflow: hidden;
   }
+}
+
+/* Fix for keyboard overlap on mobile */
+input, textarea, select {
+  font-size: 16px; /* Prevents iOS zoom */
+}
+
+/* Improve scrolling on forms */
+form {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 html, body, #root {

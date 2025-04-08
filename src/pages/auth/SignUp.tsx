@@ -46,21 +46,21 @@ const SignUp = () => {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-4 bg-mindboost-lightGray">
+    <div className="flex flex-col min-h-screen bg-mindboost-lightGray">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="w-full flex justify-center mt-6 mb-8"
+        className="w-full mt-4 mb-4"
       >
         <div className="text-center">
           <img 
             src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
             alt="MindBoost Logo" 
-            className="w-36 h-36 mx-auto"
+            className="w-24 h-24 mx-auto"
           />
-          <h1 className="text-4xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
-          <p className="text-mindboost-primary text-lg mt-1">RELAX. FOCUS. ACHIEVE</p>
+          <h1 className="text-3xl font-bold text-mindboost-dark mt-1">MINDBOOST</h1>
+          <p className="text-mindboost-primary text-base mt-1">RELAX. FOCUS. ACHIEVE</p>
         </div>
       </motion.div>
 
@@ -68,14 +68,14 @@ const SignUp = () => {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.3 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md mx-auto px-4 flex-grow overflow-y-auto pb-6"
       >
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Create Account</h2>
-          <p className="text-mindboost-gray text-center mb-6">Enter your details to sign up</p>
+        <div className="bg-white rounded-xl shadow-md p-5">
+          <h2 className="text-xl font-semibold text-mindboost-dark mb-2 text-center">Create Account</h2>
+          <p className="text-mindboost-gray text-center mb-3">Enter your details to sign up</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
               <label htmlFor="name" className="block text-sm font-medium text-mindboost-dark">
                 Name
               </label>
@@ -90,7 +90,7 @@ const SignUp = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label htmlFor="email" className="block text-sm font-medium text-mindboost-dark">
                 Email
               </label>
@@ -105,7 +105,7 @@ const SignUp = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label htmlFor="password" className="block text-sm font-medium text-mindboost-dark">
                 Password
               </label>
@@ -120,7 +120,7 @@ const SignUp = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-mindboost-dark">
                 Confirm Password
               </label>
@@ -152,7 +152,7 @@ const SignUp = () => {
           </form>
         </div>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-4">
           <p className="text-mindboost-gray">
             Already have an account?{' '}
             <Link to="/signin" className="text-mindboost-primary font-medium hover:underline">

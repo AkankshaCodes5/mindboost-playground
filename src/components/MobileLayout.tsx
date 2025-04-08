@@ -29,7 +29,7 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
   };
 
   return (
-    <div className="mindboost-container flex flex-col h-screen max-h-screen bg-mindboost-lightGray">
+    <div className="flex flex-col h-screen max-h-screen bg-mindboost-lightGray">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white shadow-sm pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
@@ -76,9 +76,9 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto pb-safe">
-        <div className="py-3 px-4">
+      {/* Main content - improved vertical centering and scrolling */}
+      <main className="flex-1 overflow-y-auto pb-safe flex flex-col">
+        <div className="py-3 px-4 flex-grow flex flex-col justify-center">
           {children}
         </div>
       </main>
