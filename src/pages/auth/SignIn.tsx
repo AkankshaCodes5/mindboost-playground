@@ -38,21 +38,21 @@ const SignIn = () => {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-4 bg-mindboost-lightGray">
+    <div className="flex flex-col items-center justify-between min-h-screen p-4 bg-mindboost-lightGray">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="w-full flex justify-center mt-6 mb-8"
+        className="w-full flex justify-center mt-4 mb-4"
       >
         <div className="text-center">
           <img 
             src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
             alt="MindBoost Logo" 
-            className="w-36 h-36 mx-auto"
+            className="w-24 h-24 mx-auto"
           />
-          <h1 className="text-4xl font-bold text-mindboost-dark mt-2">MINDBOOST</h1>
-          <p className="text-mindboost-primary text-lg mt-1">RELAX. FOCUS. ACHIEVE</p>
+          <h1 className="text-3xl font-bold text-mindboost-dark mt-1">MINDBOOST</h1>
+          <p className="text-mindboost-primary text-sm mt-1">RELAX. FOCUS. ACHIEVE</p>
         </div>
       </motion.div>
 
@@ -63,11 +63,11 @@ const SignIn = () => {
         className="w-full max-w-md"
       >
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-mindboost-dark mb-4 text-center">Log In</h2>
-          <p className="text-mindboost-gray text-center mb-6">Enter your email & password to log in</p>
+          <h2 className="text-xl font-semibold text-mindboost-dark mb-3 text-center">Log In</h2>
+          <p className="text-mindboost-gray text-center mb-4 text-sm">Enter your email & password to log in</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
               <label htmlFor="email" className="block text-sm font-medium text-mindboost-dark">
                 Email
               </label>
@@ -82,7 +82,7 @@ const SignIn = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label htmlFor="password" className="block text-sm font-medium text-mindboost-dark">
                 Password
               </label>
@@ -117,8 +117,8 @@ const SignIn = () => {
           </form>
         </div>
 
-        <div className="text-center mt-6">
-          <p className="text-mindboost-gray">
+        <div className="text-center mt-4 mb-4">
+          <p className="text-mindboost-gray text-sm">
             Don't have an account?{' '}
             <Link to="/signup" className="text-mindboost-primary font-medium hover:underline">
               Sign Up
@@ -126,6 +126,8 @@ const SignIn = () => {
           </p>
         </div>
       </motion.div>
+      
+      <div className="h-4"></div>
     </div>
   );
 };
