@@ -1,11 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Redirect to signup page
+    navigate('/splash');
+  }, [navigate]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="flex min-h-screen items-center justify-center bg-mindboost-lightGray">
+      <div className="text-center p-4">
+        <img 
+          src="/lovable-uploads/90151ba5-1f64-49ca-8445-777a7bc2fb42.png" 
+          alt="MindBoost Logo" 
+          className="w-24 h-24 mx-auto mb-4"
+        />
+        <h1 className="text-3xl font-bold text-mindboost-dark mb-2">MINDBOOST</h1>
+        <p className="text-mindboost-primary">RELAX. FOCUS. ACHIEVE</p>
       </div>
     </div>
   );

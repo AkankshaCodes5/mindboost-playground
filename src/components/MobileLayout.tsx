@@ -77,8 +77,10 @@ const MobileLayout = ({ children, title, showBack = true, showProfile = true }: 
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto pb-safe section-padding">
-        {children}
+      <main className="flex-1 overflow-auto pb-safe">
+        <div className="py-3 px-4">
+          {children}
+        </div>
       </main>
     </div>
   );
