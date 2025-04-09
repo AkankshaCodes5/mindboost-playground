@@ -9,7 +9,141 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          activity_data: Json | null
+          activity_type: string
+          created_at: string | null
+          duration: number | null
+          id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          activity_data?: Json | null
+          activity_type: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          activity_data?: Json | null
+          activity_type?: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meditation_sessions: {
+        Row: {
+          created_at: string | null
+          duration: number
+          id: string
+          meditation_type: string | null
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration: number
+          id?: string
+          meditation_type?: string | null
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number
+          id?: string
+          meditation_type?: string | null
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          daily_water_goal: number
+          id: string
+          meditation_reminder: boolean
+          reminder_time: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          daily_water_goal?: number
+          id?: string
+          meditation_reminder?: boolean
+          reminder_time?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          daily_water_goal?: number
+          id?: string
+          meditation_reminder?: boolean
+          reminder_time?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      water_logs: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,9 +1,10 @@
-import { supabase } from '@/integrations/supabase/client';
+
+import { supabase } from '@/lib/supabase';
 
 // Profile types
 export type Profile = {
   id: string;
-  user_id: string;
+  user_id?: string;
   name: string;
   email: string;
   avatar_url?: string;
@@ -53,7 +54,6 @@ export type MeditationSession = {
 };
 
 // Check if Supabase is configured before making API calls
-// Now it's always configured, but we'll keep the function for backwards compatibility
 const checkSupabase = () => {
   return true; // Always true since we're using the configured client
 };
@@ -62,14 +62,14 @@ const checkSupabase = () => {
 export const getProfile = async (): Promise<Profile | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', user.user.id)
+    .eq('id', user.user.id)
     .single();
     
   if (error) {
@@ -83,17 +83,17 @@ export const getProfile = async (): Promise<Profile | null> => {
 export const updateProfile = async (updates: Partial<Profile>): Promise<Profile | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('profiles')
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq('user_id', user.user.id)
+    .eq('id', user.user.id)
     .select()
     .single();
     
@@ -114,11 +114,11 @@ export const logActivity = async (
 ): Promise<ActivityLog | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('activity_logs')
     .insert({
       user_id: user.user.id,
@@ -181,11 +181,11 @@ export const getActivityLogs = async (
 export const logWaterIntake = async (amount: number): Promise<WaterLog | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('water_logs')
     .insert({
       user_id: user.user.id,
@@ -268,11 +268,11 @@ export const getUserSettings = async (): Promise<UserSettings | null> => {
 export const createDefaultUserSettings = async (): Promise<UserSettings | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('user_settings')
     .insert({
       user_id: user.user.id,
@@ -293,11 +293,11 @@ export const createDefaultUserSettings = async (): Promise<UserSettings | null> 
 export const updateUserSettings = async (updates: Partial<UserSettings>): Promise<UserSettings | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('user_settings')
     .update({
       ...updates,
@@ -323,11 +323,11 @@ export const logMeditationSession = async (
 ): Promise<MeditationSession | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('meditation_sessions')
     .insert({
       user_id: user.user.id,

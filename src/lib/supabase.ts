@@ -1,5 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../integrations/supabase/types'
 
 // Use the values directly from the client.ts that has the correct configuration
 import { supabase as configuredClient } from "@/integrations/supabase/client";

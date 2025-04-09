@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client'; // Updated import
+import { supabase } from '@/lib/supabase'; // Updated import
 import { useToast } from "@/components/ui/use-toast";
 
 type AuthContextType = {
@@ -69,21 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
 
-      // Create profile record in the database
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          { 
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            name, 
-            email 
-          }
-        ]);
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        // Don't throw here as the auth was successful
-      }
+      // The profile will be created automatically through the database trigger
+      // We don't need to create it manually anymore
       
       toast({
         title: "Account created",
@@ -191,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('user_id', user.id);
+        .eq('id', user.id);
         
       if (error) {
         throw error;

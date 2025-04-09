@@ -1,14 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/MobileLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { getProfile, updateProfile, getWeeklyActivitySummary } from '@/services/api';
-import { isSupabaseConfigured } from '@/lib/supabase';
 import { motion } from 'framer-motion';
-import { BarChart2, User, Settings, Award, AlertCircle, AlertTriangle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { BarChart2, User, Settings, Award, AlertCircle } from 'lucide-react';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
@@ -18,16 +15,12 @@ const UserProfile = () => {
   const [waterGoal, setWaterGoal] = useState(dailyWaterGoal);
   const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showWarning, setShowWarning] = useState(false);
   const [activityStats, setActivityStats] = useState({
     gamesPlayed: 0,
     meditationMinutes: 0,
   });
 
   useEffect(() => {
-    // Check if Supabase is configured and show warning if not
-    setShowWarning(!isSupabaseConfigured());
-    
     const loadProfileData = async () => {
       if (!user) return;
       
@@ -36,47 +29,42 @@ const UserProfile = () => {
         // Set default profile data from auth user
         const defaultProfile = getUserProfileFromUser(user);
         
-        if (isSupabaseConfigured()) {
-          try {
-            // Load profile from database if Supabase is configured
-            const profileData = await getProfile();
-            if (profileData) {
-              setProfile({
-                name: profileData.name,
-                email: profileData.email
-              });
-            } else {
-              // Fallback if profile not found
-              setProfile(defaultProfile);
-            }
-            
-            // Load activity stats
-            try {
-              const activitySummary = await getWeeklyActivitySummary();
-              
-              // Calculate games played
-              const gamesPlayed = 
-                (activitySummary['memory_game']?.count || 0);
-              
-              // Calculate meditation minutes
-              const meditationMinutes = 
-                (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
-              
-              setActivityStats({
-                gamesPlayed,
-                meditationMinutes: Math.round(meditationMinutes)
-              });
-            } catch (error) {
-              console.error('Error loading activity data:', error);
-              // Keep default stats (0 values)
-            }
-          } catch (error) {
-            console.error('Error loading profile data:', error);
-            // Fallback if profile loading fails
+        try {
+          // Load profile from database if Supabase is configured
+          const profileData = await getProfile();
+          if (profileData) {
+            setProfile({
+              name: profileData.name,
+              email: profileData.email
+            });
+          } else {
+            // Fallback if profile not found
             setProfile(defaultProfile);
           }
-        } else {
-          // Supabase not configured - use basic user info
+          
+          // Load activity stats
+          try {
+            const activitySummary = await getWeeklyActivitySummary();
+            
+            // Calculate games played
+            const gamesPlayed = 
+              (activitySummary['memory_game']?.count || 0);
+            
+            // Calculate meditation minutes
+            const meditationMinutes = 
+              (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
+            
+            setActivityStats({
+              gamesPlayed,
+              meditationMinutes: Math.round(meditationMinutes)
+            });
+          } catch (error) {
+            console.error('Error loading activity data:', error);
+            // Keep default stats (0 values)
+          }
+        } catch (error) {
+          console.error('Error loading profile data:', error);
+          // Fallback if profile loading fails
           setProfile(defaultProfile);
         }
       } finally {
@@ -125,16 +113,6 @@ const UserProfile = () => {
   return (
     <MobileLayout title="User Profile">
       <div className="p-4">
-        {showWarning && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Demo Mode</AlertTitle>
-            <AlertDescription>
-              Supabase is not configured. Some features will be limited.
-            </AlertDescription>
-          </Alert>
-        )}
-        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
