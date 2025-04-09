@@ -1,5 +1,4 @@
-
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 // Profile types
 export type Profile = {
@@ -54,12 +53,9 @@ export type MeditationSession = {
 };
 
 // Check if Supabase is configured before making API calls
+// Now it's always configured, but we'll keep the function for backwards compatibility
 const checkSupabase = () => {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase is not configured. API calls will return mock data.');
-    return false;
-  }
-  return true;
+  return true; // Always true since we're using the configured client
 };
 
 // Profile functions

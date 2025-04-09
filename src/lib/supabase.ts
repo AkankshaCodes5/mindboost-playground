@@ -1,16 +1,13 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-// Check if environment variables are available
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Use the values directly from the client.ts that has the correct configuration
+import { supabase as configuredClient } from "@/integrations/supabase/client";
 
-// Create a single supabase client for the entire app only if properly configured
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+// Export the already configured client
+export const supabase = configuredClient;
 
 // Function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== '' && supabaseAnonKey !== '' && supabase !== null;
+  return true; // Since we're using the configured client, we know it's configured
 };

@@ -1,13 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity, Brain, Music, GlassWater, AlertTriangle } from 'lucide-react';
+import { Activity, Brain, Music, GlassWater } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { getProfile } from '@/services/api';
-import { isSupabaseConfigured } from '@/lib/supabase';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ActivityCard from '../components/ActivityCard';
 
 const Dashboard = () => {
@@ -16,33 +13,24 @@ const Dashboard = () => {
   const { getTotalWaterToday, getWaterPercentage, getMeditationMinutesToday } = useProgress();
   const [greeting, setGreeting] = useState('');
   const [userName, setUserName] = useState('');
-  const [showWarning, setShowWarning] = useState(false);
   const waterPercentage = getWaterPercentage();
   const meditationMinutes = getMeditationMinutesToday();
 
   useEffect(() => {
-    // Check if Supabase is configured and show warning if not
-    setShowWarning(!isSupabaseConfigured());
-
     const loadUserProfile = async () => {
       if (user) {
-        if (isSupabaseConfigured()) {
-          try {
-            // Attempt to get user's name from profile
-            const profile = await getProfile();
-            if (profile && profile.name) {
-              setUserName(profile.name);
-            } else {
-              // Fall back to user metadata or email
-              setUserName(getUserNameFromUser(user));
-            }
-          } catch (error) {
-            console.error('Error loading profile:', error);
-            // Fall back to simple user name extraction
+        try {
+          // Attempt to get user's name from profile
+          const profile = await getProfile();
+          if (profile && profile.name) {
+            setUserName(profile.name);
+          } else {
+            // Fall back to user metadata or email
             setUserName(getUserNameFromUser(user));
           }
-        } else {
-          // Supabase not configured - use basic user info
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          // Fall back to simple user name extraction
           setUserName(getUserNameFromUser(user));
         }
       } else {
@@ -113,16 +101,6 @@ const Dashboard = () => {
         className="w-24 h-24 mb-4"
       />
       <h1 className="text-3xl font-bold text-mindboost-dark mb-2">MINDBOOST</h1>
-
-      {showWarning && (
-        <Alert variant="destructive" className="mb-4 w-full max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Demo Mode</AlertTitle>
-          <AlertDescription>
-            Supabase is not configured. Some features will be limited.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

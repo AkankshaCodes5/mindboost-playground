@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProgressProvider } from "./contexts/ProgressContext";
-import { isSupabaseConfigured } from "./lib/supabase";
 
 import SplashScreen from "./pages/SplashScreen";
 import SignIn from "./pages/auth/SignIn";
@@ -30,14 +28,6 @@ import PrivateRoute from "./components/PrivateRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isConfigured, setIsConfigured] = useState(true);
-  
-  useEffect(() => {
-    // We'll still load the app, but show warnings in components
-    // This allows the app to work in demo mode without Supabase
-    setIsConfigured(isSupabaseConfigured());
-  }, []);
-  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
