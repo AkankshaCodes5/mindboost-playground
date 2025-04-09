@@ -3,11 +3,14 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -15,17 +18,72 @@ const SignIn = () => {
     e.preventDefault();
     
     if (!email || !password) {
+      setErrorMessage('Please enter both email and password');
       return;
     }
+    
+    setErrorMessage(null);
     
     try {
       setIsSubmitting(true);
       await signIn(email, password);
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      // Handle specific error for email not confirmed
+      if (error.message?.includes('Email not confirmed')) {
+        setErrorMessage('Please verify your email before signing in. Check your inbox for a confirmation link.');
+        
+        // Offer to resend confirmation email
+        toast({
+          title: "Email not verified",
+          description: "Please check your inbox for the verification email or click 'Resend' below.",
+          action: (
+            <button 
+              onClick={() => handleResendConfirmation()} 
+              className="bg-mindboost-primary text-white px-4 py-1 rounded text-xs"
+            >
+              Resend
+            </button>
+          ),
+        });
+      } else {
+        setErrorMessage(error.message || 'Failed to sign in. Please check your credentials.');
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Confirmation email sent",
+        description: "Please check your inbox for the verification link",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend confirmation email",
+        variant: "destructive",
+      });
     }
   };
 
@@ -57,6 +115,12 @@ const SignIn = () => {
         <div className="bg-white rounded-xl shadow-md p-5">
           <h2 className="text-lg font-semibold text-mindboost-dark mb-2 text-center">Log In</h2>
           <p className="text-mindboost-gray text-center mb-3 text-xs">Enter your email & password to log in</p>
+
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+              <p className="text-red-600 text-sm">{errorMessage}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1">

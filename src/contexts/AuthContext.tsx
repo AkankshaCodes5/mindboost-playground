@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/components/ui/use-toast";
 
 type AuthContextType = {
@@ -50,13 +50,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, []);
 
   const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -70,9 +70,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
 
-      // The profile will be created automatically through the database trigger
-      // We don't need to create it manually anymore
-      
       toast({
         title: "Account created",
         description: "Your account has been created successfully. Please verify your email.",
@@ -93,12 +90,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        // Check for email not confirmed error
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email not confirmed. Please check your inbox for the verification link.');
+        }
         throw error;
       }
       
