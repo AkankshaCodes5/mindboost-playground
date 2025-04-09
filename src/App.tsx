@@ -8,7 +8,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProgressProvider } from "./contexts/ProgressContext";
 import { isSupabaseConfigured } from "./lib/supabase";
-import ConfigurationWarning from "./components/ConfigurationWarning";
 
 import SplashScreen from "./pages/SplashScreen";
 import SignIn from "./pages/auth/SignIn";

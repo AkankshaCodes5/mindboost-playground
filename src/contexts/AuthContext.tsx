@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -35,9 +36,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!isSupabaseConfigured()) {
       console.error('Supabase is not properly configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
       toast({
-        title: "Configuration Error",
-        description: "Backend services are not properly configured. Please contact support.",
-        variant: "destructive",
+        title: "Configuration Warning",
+        description: "Backend services are not properly configured. The app will run in demo mode.",
+        variant: "warning",
       });
       setLoading(false);
       return;
@@ -47,14 +48,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase!.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase!.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -66,12 +67,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [toast]);
 
+  // Create mock/demo implementations when Supabase is not configured
   const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);
     
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate signup success
+        setUser({
+          id: 'demo-user-id',
+          app_metadata: {},
+          user_metadata: { name },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+        } as User);
+        
+        toast({
+          title: "Demo Mode",
+          description: "Account created in demo mode (no actual backend).",
+        });
+        return;
+      }
+      
       // Sign up the user
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase!.auth.signUp({
         email,
         password,
         options: {
@@ -86,11 +106,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Create profile record in the database
-      const { error: profileError } = await supabase
+      const { error: profileError } = await supabase!
         .from('profiles')
         .insert([
           { 
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            user_id: (await supabase!.auth.getUser()).data.user?.id,
             name, 
             email 
           }
@@ -121,7 +141,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate login success
+        setUser({
+          id: 'demo-user-id',
+          app_metadata: {},
+          user_metadata: { name: email.split('@')[0] },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+        } as User);
+        
+        toast({
+          title: "Demo Mode",
+          description: "Logged in with demo account (no actual backend).",
+        });
+        return;
+      }
+      
+      const { error } = await supabase!.auth.signInWithPassword({
         email,
         password,
       });
@@ -148,7 +186,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      if (!isSupabaseConfigured()) {
+        // Demo mode - just clear user state
+        setUser(null);
+        setSession(null);
+        
+        toast({
+          title: "Demo Mode",
+          description: "Signed out from demo account.",
+        });
+        return;
+      }
+      
+      const { error } = await supabase!.auth.signOut();
       
       if (error) {
         throw error;
@@ -171,7 +221,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - simulate reset email
+        toast({
+          title: "Demo Mode",
+          description: "Password reset email would be sent in a real environment.",
+        });
+        return;
+      }
+      
+      const { error } = await supabase!.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       
@@ -197,6 +256,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (data: { name?: string, avatar_url?: string }) => {
     try {
+      if (!isSupabaseConfigured()) {
+        // Demo mode - just show a message
+        toast({
+          title: "Demo Mode",
+          description: "Profile would be updated in a real environment.",
+        });
+        return;
+      }
+      
       if (!user) throw new Error('User not authenticated');
       
       const updates = {
@@ -204,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('profiles')
         .update(updates)
         .eq('user_id', user.id);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/MobileLayout';
@@ -6,7 +7,8 @@ import { useProgress } from '../contexts/ProgressContext';
 import { getProfile, updateProfile, getWeeklyActivitySummary } from '@/services/api';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { motion } from 'framer-motion';
-import { BarChart2, User, Settings, Award, AlertCircle } from 'lucide-react';
+import { BarChart2, User, Settings, Award, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
@@ -16,23 +18,23 @@ const UserProfile = () => {
   const [waterGoal, setWaterGoal] = useState(dailyWaterGoal);
   const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showWarning, setShowWarning] = useState(false);
   const [activityStats, setActivityStats] = useState({
     gamesPlayed: 0,
     meditationMinutes: 0,
   });
 
   useEffect(() => {
+    // Check if Supabase is configured and show warning if not
+    setShowWarning(!isSupabaseConfigured());
+    
     const loadProfileData = async () => {
       if (!user) return;
       
       setIsLoading(true);
       try {
         // Set default profile data from auth user
-        const userMetadata = user.user_metadata as { name?: string } | undefined;
-        const defaultProfile = {
-          name: userMetadata?.name || user.email?.split('@')[0] || 'User',
-          email: user.email || ''
-        };
+        const defaultProfile = getUserProfileFromUser(user);
         
         if (isSupabaseConfigured()) {
           try {
@@ -82,6 +84,20 @@ const UserProfile = () => {
       }
     };
     
+    // Extract user profile from user object
+    const getUserProfileFromUser = (user: any) => {
+      if (!user) return { name: 'User', email: '' };
+      
+      // Try to get name from user_metadata
+      const userMetadata = user.user_metadata as { name?: string } | undefined;
+      const name = userMetadata?.name || (user.email ? user.email.split('@')[0] : 'User');
+      
+      return {
+        name,
+        email: user.email || ''
+      };
+    };
+    
     loadProfileData();
   }, [user]);
 
@@ -109,6 +125,16 @@ const UserProfile = () => {
   return (
     <MobileLayout title="User Profile">
       <div className="p-4">
+        {showWarning && (
+          <Alert variant="warning" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Demo Mode</AlertTitle>
+            <AlertDescription>
+              Supabase is not configured. Some features will be limited.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,11 +150,11 @@ const UserProfile = () => {
             ) : (
               <div className="flex items-center">
                 <div className="w-16 h-16 rounded-full bg-mindboost-primary flex items-center justify-center text-white text-2xl font-semibold">
-                  {profile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                  {profile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="ml-4">
                   <h2 className="text-xl font-semibold">{profile?.name || 'User'}</h2>
-                  <p className="text-gray-500">{profile?.email || user?.email}</p>
+                  <p className="text-gray-500">{profile?.email || user?.email || 'No email provided'}</p>
                 </div>
               </div>
             )}

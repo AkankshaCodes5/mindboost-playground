@@ -147,11 +147,13 @@ export const getActivityLogs = async (
   start_date?: string,
   end_date?: string
 ): Promise<ActivityLog[]> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return [];
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase
+  let query = supabase!
     .from('activity_logs')
     .select('*')
     .eq('user_id', user.user.id)
@@ -181,11 +183,13 @@ export const getActivityLogs = async (
 
 // Water log functions
 export const logWaterIntake = async (amount: number): Promise<WaterLog | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('water_logs')
     .insert({
       user_id: user.user.id,
@@ -203,11 +207,13 @@ export const logWaterIntake = async (amount: number): Promise<WaterLog | null> =
 };
 
 export const getWaterLogs = async (date?: string): Promise<WaterLog[]> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return [];
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase
+  let query = supabase!
     .from('water_logs')
     .select('*')
     .eq('user_id', user.user.id)
@@ -238,11 +244,13 @@ export const getWaterLogs = async (date?: string): Promise<WaterLog[]> => {
 
 // User settings functions
 export const getUserSettings = async (): Promise<UserSettings | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('user_settings')
     .select('*')
     .eq('user_id', user.user.id)
@@ -262,11 +270,13 @@ export const getUserSettings = async (): Promise<UserSettings | null> => {
 };
 
 export const createDefaultUserSettings = async (): Promise<UserSettings | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('user_settings')
     .insert({
       user_id: user.user.id,
@@ -285,11 +295,13 @@ export const createDefaultUserSettings = async (): Promise<UserSettings | null> 
 };
 
 export const updateUserSettings = async (updates: Partial<UserSettings>): Promise<UserSettings | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('user_settings')
     .update({
       ...updates,
@@ -313,11 +325,13 @@ export const logMeditationSession = async (
   meditation_type?: string,
   notes?: string
 ): Promise<MeditationSession | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('meditation_sessions')
     .insert({
       user_id: user.user.id,
@@ -337,11 +351,13 @@ export const logMeditationSession = async (
 };
 
 export const getMeditationSessions = async (start_date?: string, end_date?: string): Promise<MeditationSession[]> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return [];
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase
+  let query = supabase!
     .from('meditation_sessions')
     .select('*')
     .eq('user_id', user.user.id)
@@ -432,6 +448,8 @@ export const getWeeklyActivitySummary = async (): Promise<{
 };
 
 export const getTotalMeditationTime = async (timeframe: 'day' | 'week' | 'month'): Promise<number> => {
+  if (!checkSupabase()) return 0;
+  
   const today = new Date();
   let startDate = new Date();
   
