@@ -1,19 +1,18 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from "@/components/ui/use-toast";
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { useToast } from "@/components/ui/use-toast";
 
 type AuthContextType = {
   user: User | null;
+  session: Session | null;
   loading: boolean;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateProfile: (data: { name?: string, avatar_url?: string }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,50 +27,77 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check for stored user on initial load
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('mindboost_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error("Error loading user from storage:", error);
-    } finally {
+    // Get initial session
+    setLoading(true);
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    }
+    });
+
+    // Initial session fetch
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Mock signup function - in a real app, this would connect to a backend
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Sign up the user
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+        },
+      });
       
-      // Create a mock user
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        email
-      };
-      
-      // Save to local storage (for demo purposes)
-      localStorage.setItem('mindboost_user', JSON.stringify(newUser));
-      setUser(newUser);
+      if (error) {
+        throw error;
+      }
+
+      // Create profile record in the database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            name, 
+            email 
+          }
+        ]);
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        // Don't throw here as the auth was successful
+      }
       
       toast({
-        title: "Welcome to MindBoost!",
-        description: "Your account has been created successfully.",
+        title: "Account created",
+        description: "Your account has been created successfully. Please verify your email.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create account. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create account",
         variant: "destructive",
       });
       throw error;
@@ -80,37 +106,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Mock signin function
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // For demo, we'll check if there's a stored user first
-      const storedUser = localStorage.getItem('mindboost_user');
-      if (!storedUser) {
-        throw new Error('No user found. Please sign up first.');
+      if (error) {
+        throw error;
       }
-      
-      const userData = JSON.parse(storedUser);
-      // In a real app, we would validate the email and password
-      // For demo, just check if the email matches
-      if (userData.email !== email) {
-        throw new Error('Invalid email or password.');
-      }
-      
-      setUser(userData);
       
       toast({
-        title: "Welcome to MindBoost!",
+        title: "Welcome back!",
         description: "You have successfully logged in.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Invalid email or password.",
+        description: error instanceof Error ? error.message : "Invalid email or password",
         variant: "destructive",
       });
       throw error;
@@ -119,16 +135,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signOut = () => {
+  const signOut = async () => {
     try {
-      localStorage.removeItem('mindboost_user');
-      setUser(null);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
     } catch (error) {
-      console.error("Error signing out:", error);
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
@@ -141,8 +160,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Password reset link sent",
@@ -151,7 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send reset link. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send reset email",
         variant: "destructive",
       });
       throw error;
@@ -160,13 +184,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateProfile = async (data: { name?: string, avatar_url?: string }) => {
+    try {
+      if (!user) throw new Error('User not authenticated');
+      
+      const updates = {
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const value = {
     user,
+    session,
     loading,
     signUp,
     signIn,
     signOut,
-    resetPassword
+    resetPassword,
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -11,6 +11,7 @@ import SplashScreen from "./pages/SplashScreen";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import MemoryGames from "./pages/games/MemoryGames";
 import MatchingGame from "./pages/games/MatchingGame";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               <Route path="/dashboard" element={
                 <PrivateRoute>

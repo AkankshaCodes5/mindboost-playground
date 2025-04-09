@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -14,7 +13,8 @@ const WaterTracker = () => {
     addWaterLog, 
     getTotalWaterToday, 
     getWaterPercentage,
-    waterLogs
+    waterLogs,
+    isLoading
   } = useProgress();
   
   const [showSettings, setShowSettings] = useState(false);
@@ -28,31 +28,18 @@ const WaterTracker = () => {
   useEffect(() => {
     setTotalWater(getTotalWaterToday());
     setPercentage(getWaterPercentage());
-  }, [getTotalWaterToday, getWaterPercentage, waterLogs]);
+    setNewGoal(dailyWaterGoal);
+  }, [getTotalWaterToday, getWaterPercentage, dailyWaterGoal, waterLogs]);
 
-  const handleAddWater = () => {
-    addWaterLog(waterAmount);
-    
-    toast({
-      title: "Water Added",
-      description: `Added ${waterAmount}ml to your daily intake.`,
-    });
-    
-    setTotalWater(prev => prev + waterAmount);
-    setPercentage(Math.min(100, Math.round(((totalWater + waterAmount) / dailyWaterGoal) * 100)));
+  const handleAddWater = async () => {
+    await addWaterLog(waterAmount);
+    setTotalWater(getTotalWaterToday());
+    setPercentage(getWaterPercentage());
   };
 
-  const handleSaveGoal = () => {
-    setDailyWaterGoal(newGoal);
+  const handleSaveGoal = async () => {
+    await setDailyWaterGoal(newGoal);
     setShowSettings(false);
-    
-    toast({
-      title: "Goal Updated",
-      description: `Your daily water goal is now ${newGoal}ml.`,
-    });
-    
-    // Recalculate percentage
-    setPercentage(Math.min(100, Math.round((totalWater / newGoal) * 100)));
   };
 
   const increaseWaterAmount = () => {
@@ -101,7 +88,6 @@ const WaterTracker = () => {
           </p>
         </div>
         
-        {/* Settings panel */}
         {showSettings && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -145,8 +131,13 @@ const WaterTracker = () => {
               <button
                 onClick={handleSaveGoal}
                 className="bg-mindboost-primary text-white px-4 py-2 rounded-md text-sm"
+                disabled={isLoading}
               >
-                Save
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white mx-auto"></div>
+                ) : (
+                  'Save'
+                )}
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
@@ -155,7 +146,6 @@ const WaterTracker = () => {
           </motion.div>
         )}
         
-        {/* Water glass visualization */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative mb-6">
             <div className="water-glass">
@@ -181,7 +171,6 @@ const WaterTracker = () => {
           </div>
         </div>
         
-        {/* Add water section */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <h3 className="font-medium mb-3">Add Water</h3>
           <div className="flex items-center justify-between mb-4">
@@ -207,13 +196,19 @@ const WaterTracker = () => {
           <button
             onClick={handleAddWater}
             className="w-full flex items-center justify-center mindboost-button"
+            disabled={isLoading}
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Water
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white mx-auto"></div>
+            ) : (
+              <>
+                <Plus className="w-5 h-5 mr-2" />
+                Add Water
+              </>
+            )}
           </button>
         </div>
         
-        {/* Benefits section */}
         <div className="bg-white rounded-xl shadow-sm p-4">
           <h3 className="font-semibold mb-2">Benefits of Hydration</h3>
           <ul className="space-y-2 text-gray-600 text-sm">

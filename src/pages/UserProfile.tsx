@@ -1,16 +1,69 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/MobileLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
+import { getProfile, updateProfile, getWeeklyActivitySummary } from '@/services/api';
 import { motion } from 'framer-motion';
 import { BarChart2, User, Settings, Award, AlertCircle } from 'lucide-react';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { dailyWaterGoal, setDailyWaterGoal } = useProgress();
   const [isEditing, setIsEditing] = useState(false);
   const [waterGoal, setWaterGoal] = useState(dailyWaterGoal);
+  const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activityStats, setActivityStats] = useState({
+    gamesPlayed: 0,
+    meditationMinutes: 0,
+  });
+
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        // Load profile
+        const profileData = await getProfile();
+        if (profileData) {
+          setProfile({
+            name: profileData.name,
+            email: profileData.email
+          });
+        }
+        
+        // Load activity stats
+        const activitySummary = await getWeeklyActivitySummary();
+        
+        // Calculate games played
+        const gamesPlayed = 
+          (activitySummary['memory_game']?.count || 0);
+        
+        // Calculate meditation minutes
+        const meditationMinutes = 
+          (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
+        
+        setActivityStats({
+          gamesPlayed,
+          meditationMinutes: Math.round(meditationMinutes)
+        });
+      } catch (error) {
+        console.error('Error loading profile data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProfileData();
+  }, [user]);
+
+  useEffect(() => {
+    setWaterGoal(dailyWaterGoal);
+  }, [dailyWaterGoal]);
 
   const handleWaterGoalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -19,9 +72,14 @@ const UserProfile = () => {
     }
   };
 
-  const saveWaterGoal = () => {
-    setDailyWaterGoal(waterGoal);
+  const saveWaterGoal = async () => {
+    await setDailyWaterGoal(waterGoal);
     setIsEditing(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/signin');
   };
 
   return (
@@ -35,15 +93,21 @@ const UserProfile = () => {
         >
           {/* User info card */}
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex items-center">
-              <div className="w-16 h-16 rounded-full bg-mindboost-primary flex items-center justify-center text-white text-2xl font-semibold">
-                {user?.name.charAt(0).toUpperCase()}
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-mindboost-primary"></div>
               </div>
-              <div className="ml-4">
-                <h2 className="text-xl font-semibold">{user?.name}</h2>
-                <p className="text-gray-500">{user?.email}</p>
+            ) : (
+              <div className="flex items-center">
+                <div className="w-16 h-16 rounded-full bg-mindboost-primary flex items-center justify-center text-white text-2xl font-semibold">
+                  {profile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                </div>
+                <div className="ml-4">
+                  <h2 className="text-xl font-semibold">{profile?.name || 'User'}</h2>
+                  <p className="text-gray-500">{profile?.email || user?.email}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Stats overview */}
@@ -55,11 +119,11 @@ const UserProfile = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Memory Games Played</p>
-                <p className="text-xl font-semibold">0</p>
+                <p className="text-xl font-semibold">{activityStats.gamesPlayed}</p>
               </div>
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Meditation Minutes</p>
-                <p className="text-xl font-semibold">0</p>
+                <p className="text-xl font-semibold">{activityStats.meditationMinutes}</p>
               </div>
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Water Intake Goal</p>
@@ -131,7 +195,7 @@ const UserProfile = () => {
 
           {/* Logout button */}
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="w-full p-3 bg-red-100 text-red-600 rounded-lg font-medium"
           >
             Sign Out

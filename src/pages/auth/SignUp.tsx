@@ -36,7 +36,7 @@ const SignUp = () => {
     
     try {
       setIsSubmitting(true);
-      await signUp(name, email, password);
+      await signUp(email, password, name);
       navigate('/dashboard');
     } catch (error) {
       console.error('Sign up error:', error);
