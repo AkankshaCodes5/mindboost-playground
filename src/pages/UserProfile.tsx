@@ -126,7 +126,7 @@ const UserProfile = () => {
     <MobileLayout title="User Profile">
       <div className="p-4">
         {showWarning && (
-          <Alert variant="warning" className="mb-4">
+          <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Demo Mode</AlertTitle>
             <AlertDescription>

@@ -115,7 +115,7 @@ const Dashboard = () => {
       <h1 className="text-3xl font-bold text-mindboost-dark mb-2">MINDBOOST</h1>
 
       {showWarning && (
-        <Alert variant="warning" className="mb-4 w-full max-w-md">
+        <Alert variant="destructive" className="mb-4 w-full max-w-md">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Demo Mode</AlertTitle>
           <AlertDescription>

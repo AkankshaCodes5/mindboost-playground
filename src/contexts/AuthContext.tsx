@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: "Configuration Warning",
         description: "Backend services are not properly configured. The app will run in demo mode.",
-        variant: "warning",
+        variant: "destructive",
       });
       setLoading(false);
       return;
