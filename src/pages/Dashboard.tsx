@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -5,6 +6,7 @@ import { Activity, Brain, Music, GlassWater } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { getProfile } from '@/services/api';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import ActivityCard from '../components/ActivityCard';
 
 const Dashboard = () => {
@@ -19,15 +21,30 @@ const Dashboard = () => {
   useEffect(() => {
     const loadUserProfile = async () => {
       if (user) {
-        // Attempt to get user's name from profile
-        const profile = await getProfile();
-        if (profile && profile.name) {
-          setUserName(profile.name);
+        if (isSupabaseConfigured()) {
+          try {
+            // Attempt to get user's name from profile
+            const profile = await getProfile();
+            if (profile && profile.name) {
+              setUserName(profile.name);
+            } else {
+              // Fall back to user metadata or email
+              const userMetadata = user.user_metadata as { name?: string } | undefined;
+              setUserName(userMetadata?.name || user.email?.split('@')[0] || 'User');
+            }
+          } catch (error) {
+            console.error('Error loading profile:', error);
+            // Fall back to simple user name extraction
+            const userMetadata = user.user_metadata as { name?: string } | undefined;
+            setUserName(userMetadata?.name || user.email?.split('@')[0] || 'User');
+          }
         } else {
-          // Fall back to user metadata or email
+          // Supabase not configured - use basic user info
           const userMetadata = user.user_metadata as { name?: string } | undefined;
           setUserName(userMetadata?.name || user.email?.split('@')[0] || 'User');
         }
+      } else {
+        setUserName('User');
       }
     };
     

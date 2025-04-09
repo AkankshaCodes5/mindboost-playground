@@ -34,12 +34,10 @@ const App = () => {
   const [isConfigured, setIsConfigured] = useState(true);
   
   useEffect(() => {
+    // We'll still load the app, but show warnings in components
+    // This allows the app to work in demo mode without Supabase
     setIsConfigured(isSupabaseConfigured());
   }, []);
-  
-  if (!isConfigured) {
-    return <ConfigurationWarning />;
-  }
   
   return (
     <QueryClientProvider client={queryClient}>

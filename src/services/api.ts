@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // Profile types
 export type Profile = {
@@ -53,13 +53,24 @@ export type MeditationSession = {
   created_at: string;
 };
 
+// Check if Supabase is configured before making API calls
+const checkSupabase = () => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase is not configured. API calls will return mock data.');
+    return false;
+  }
+  return true;
+};
+
 // Profile functions
 export const getProfile = async (): Promise<Profile | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('profiles')
     .select('*')
     .eq('user_id', user.user.id)
@@ -74,11 +85,13 @@ export const getProfile = async (): Promise<Profile | null> => {
 };
 
 export const updateProfile = async (updates: Partial<Profile>): Promise<Profile | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('profiles')
     .update({
       ...updates,
@@ -103,11 +116,13 @@ export const logActivity = async (
   score?: number,
   duration?: number
 ): Promise<ActivityLog | null> => {
-  const { data: user } = await supabase.auth.getUser();
+  if (!checkSupabase()) return null;
+  
+  const { data: user } = await supabase!.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('activity_logs')
     .insert({
       user_id: user.user.id,
@@ -352,8 +367,9 @@ export const getMeditationSessions = async (start_date?: string, end_date?: stri
 
 // Report generation functions
 export const getDailyWaterSummary = async (date?: string): Promise<number> => {
-  const logs = await getWaterLogs(date || new Date().toISOString().split('T')[0]);
+  if (!checkSupabase()) return 0;
   
+  const logs = await getWaterLogs(date || new Date().toISOString().split('T')[0]);
   return logs.reduce((total, log) => total + log.amount, 0);
 };
 
@@ -364,6 +380,13 @@ export const getWeeklyActivitySummary = async (): Promise<{
     totalDuration?: number;
   };
 }> => {
+  if (!checkSupabase()) {
+    return {
+      'memory_game': { count: 0, totalScore: 0 },
+      'meditation': { count: 0, totalDuration: 0 }
+    };
+  }
+  
   // Calculate date from 7 days ago
   const today = new Date();
   const sevenDaysAgo = new Date();

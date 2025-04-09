@@ -5,14 +5,12 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a single supabase client for the entire app
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+// Create a single supabase client for the entire app only if properly configured
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== '' && supabaseAnonKey !== '';
+  return supabaseUrl !== '' && supabaseAnonKey !== '' && supabase !== null;
 };
-

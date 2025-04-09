@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/MobileLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { getProfile, updateProfile, getWeeklyActivitySummary } from '@/services/api';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { BarChart2, User, Settings, Award, AlertCircle } from 'lucide-react';
 
@@ -27,39 +27,56 @@ const UserProfile = () => {
       
       setIsLoading(true);
       try {
-        // Load profile
-        const profileData = await getProfile();
-        if (profileData) {
-          setProfile({
-            name: profileData.name,
-            email: profileData.email
-          });
+        // Set default profile data from auth user
+        const userMetadata = user.user_metadata as { name?: string } | undefined;
+        const defaultProfile = {
+          name: userMetadata?.name || user.email?.split('@')[0] || 'User',
+          email: user.email || ''
+        };
+        
+        if (isSupabaseConfigured()) {
+          try {
+            // Load profile from database if Supabase is configured
+            const profileData = await getProfile();
+            if (profileData) {
+              setProfile({
+                name: profileData.name,
+                email: profileData.email
+              });
+            } else {
+              // Fallback if profile not found
+              setProfile(defaultProfile);
+            }
+            
+            // Load activity stats
+            try {
+              const activitySummary = await getWeeklyActivitySummary();
+              
+              // Calculate games played
+              const gamesPlayed = 
+                (activitySummary['memory_game']?.count || 0);
+              
+              // Calculate meditation minutes
+              const meditationMinutes = 
+                (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
+              
+              setActivityStats({
+                gamesPlayed,
+                meditationMinutes: Math.round(meditationMinutes)
+              });
+            } catch (error) {
+              console.error('Error loading activity data:', error);
+              // Keep default stats (0 values)
+            }
+          } catch (error) {
+            console.error('Error loading profile data:', error);
+            // Fallback if profile loading fails
+            setProfile(defaultProfile);
+          }
         } else {
-          // Fallback if profile not found
-          const userMetadata = user.user_metadata as { name?: string } | undefined;
-          setProfile({
-            name: userMetadata?.name || user.email?.split('@')[0] || 'User',
-            email: user.email || ''
-          });
+          // Supabase not configured - use basic user info
+          setProfile(defaultProfile);
         }
-        
-        // Load activity stats
-        const activitySummary = await getWeeklyActivitySummary();
-        
-        // Calculate games played
-        const gamesPlayed = 
-          (activitySummary['memory_game']?.count || 0);
-        
-        // Calculate meditation minutes
-        const meditationMinutes = 
-          (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
-        
-        setActivityStats({
-          gamesPlayed,
-          meditationMinutes: Math.round(meditationMinutes)
-        });
-      } catch (error) {
-        console.error('Error loading profile data:', error);
       } finally {
         setIsLoading(false);
       }
