@@ -34,6 +34,13 @@ const UserProfile = () => {
             name: profileData.name,
             email: profileData.email
           });
+        } else {
+          // Fallback if profile not found
+          const userMetadata = user.user_metadata as { name?: string } | undefined;
+          setProfile({
+            name: userMetadata?.name || user.email?.split('@')[0] || 'User',
+            email: user.email || ''
+          });
         }
         
         // Load activity stats
