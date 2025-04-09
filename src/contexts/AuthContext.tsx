@@ -1,6 +1,7 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase'; // Updated import
+import { supabase } from '@/lib/supabase';
 import { useToast } from "@/components/ui/use-toast";
 
 type AuthContextType = {
@@ -174,7 +175,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ...data,
         updated_at: new Date().toISOString(),
       };
-      
+
+      // Use the correct type for the update operation
       const { error } = await supabase
         .from('profiles')
         .update(updates)

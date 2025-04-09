@@ -77,7 +77,7 @@ export const getProfile = async (): Promise<Profile | null> => {
     return null;
   }
   
-  return data;
+  return data as Profile;
 };
 
 export const updateProfile = async (updates: Partial<Profile>): Promise<Profile | null> => {
@@ -94,15 +94,14 @@ export const updateProfile = async (updates: Partial<Profile>): Promise<Profile 
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.user.id)
-    .select()
-    .single();
+    .select();
     
   if (error) {
     console.error('Error updating profile:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as Profile;
 };
 
 // Activity log functions
@@ -126,16 +125,15 @@ export const logActivity = async (
       activity_data,
       score,
       duration,
-    })
-    .select()
-    .single();
+    } as any)
+    .select();
     
   if (error) {
     console.error('Error logging activity:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as ActivityLog;
 };
 
 export const getActivityLogs = async (
@@ -145,11 +143,11 @@ export const getActivityLogs = async (
 ): Promise<ActivityLog[]> => {
   if (!checkSupabase()) return [];
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase!
+  let query = supabase
     .from('activity_logs')
     .select('*')
     .eq('user_id', user.user.id)
@@ -174,7 +172,7 @@ export const getActivityLogs = async (
     return [];
   }
   
-  return data || [];
+  return data as ActivityLog[];
 };
 
 // Water log functions
@@ -190,26 +188,25 @@ export const logWaterIntake = async (amount: number): Promise<WaterLog | null> =
     .insert({
       user_id: user.user.id,
       amount,
-    })
-    .select()
-    .single();
+    } as any)
+    .select();
     
   if (error) {
     console.error('Error logging water intake:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as WaterLog;
 };
 
 export const getWaterLogs = async (date?: string): Promise<WaterLog[]> => {
   if (!checkSupabase()) return [];
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase!
+  let query = supabase
     .from('water_logs')
     .select('*')
     .eq('user_id', user.user.id)
@@ -235,18 +232,18 @@ export const getWaterLogs = async (date?: string): Promise<WaterLog[]> => {
     return [];
   }
   
-  return data || [];
+  return data as WaterLog[];
 };
 
 // User settings functions
 export const getUserSettings = async (): Promise<UserSettings | null> => {
   if (!checkSupabase()) return null;
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return null;
   
-  const { data, error } = await supabase!
+  const { data, error } = await supabase
     .from('user_settings')
     .select('*')
     .eq('user_id', user.user.id)
@@ -262,7 +259,7 @@ export const getUserSettings = async (): Promise<UserSettings | null> => {
     return createDefaultUserSettings();
   }
   
-  return data;
+  return data as UserSettings;
 };
 
 export const createDefaultUserSettings = async (): Promise<UserSettings | null> => {
@@ -278,16 +275,15 @@ export const createDefaultUserSettings = async (): Promise<UserSettings | null> 
       user_id: user.user.id,
       daily_water_goal: 2000,
       meditation_reminder: false,
-    })
-    .select()
-    .single();
+    } as any)
+    .select();
     
   if (error) {
     console.error('Error creating user settings:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as UserSettings;
 };
 
 export const updateUserSettings = async (updates: Partial<UserSettings>): Promise<UserSettings | null> => {
@@ -302,17 +298,16 @@ export const updateUserSettings = async (updates: Partial<UserSettings>): Promis
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('user_id', user.user.id)
-    .select()
-    .single();
+    .select();
     
   if (error) {
     console.error('Error updating user settings:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as UserSettings;
 };
 
 // Meditation session functions
@@ -334,26 +329,25 @@ export const logMeditationSession = async (
       duration,
       meditation_type,
       notes,
-    })
-    .select()
-    .single();
+    } as any)
+    .select();
     
   if (error) {
     console.error('Error logging meditation session:', error);
     return null;
   }
   
-  return data;
+  return data?.[0] as MeditationSession;
 };
 
 export const getMeditationSessions = async (start_date?: string, end_date?: string): Promise<MeditationSession[]> => {
   if (!checkSupabase()) return [];
   
-  const { data: user } = await supabase!.auth.getUser();
+  const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) return [];
   
-  let query = supabase!
+  let query = supabase
     .from('meditation_sessions')
     .select('*')
     .eq('user_id', user.user.id)
@@ -374,7 +368,7 @@ export const getMeditationSessions = async (start_date?: string, end_date?: stri
     return [];
   }
   
-  return data || [];
+  return data as MeditationSession[];
 };
 
 // Report generation functions
