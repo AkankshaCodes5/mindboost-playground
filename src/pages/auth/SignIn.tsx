@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -14,11 +15,22 @@ const SignIn = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
+  const validateEmail = (email: string) => {
+    // Basic email validation
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
       setErrorMessage('Please enter both email and password');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
     
@@ -61,6 +73,15 @@ const SignIn = () => {
       toast({
         title: "Error",
         description: "Please enter your email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
         variant: "destructive",
       });
       return;
@@ -117,9 +138,9 @@ const SignIn = () => {
           <p className="text-mindboost-gray text-center mb-3 text-xs">Enter your email & password to log in</p>
 
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-              <p className="text-red-600 text-sm">{errorMessage}</p>
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3">

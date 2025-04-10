@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
   user: User | null;
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Account created",
         description: "Your account has been created successfully. Please verify your email.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create account",
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Invalid email or password",

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -13,6 +14,13 @@ const SignUp = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const validateEmail = (email: string) => {
+    // Basic email validation
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
 
   const validatePassword = () => {
     if (password !== confirmPassword) {
@@ -33,13 +41,35 @@ const SignUp = () => {
     if (!validatePassword()) {
       return;
     }
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       setIsSubmitting(true);
       await signUp(email, password, name);
-      navigate('/dashboard');
-    } catch (error) {
+      
+      // After successful signup, show a success message
+      toast({
+        title: "Success!",
+        description: "Your account has been created. Please check your email for verification.",
+      });
+      
+      // Navigate to signin page instead of dashboard since email verification is required
+      navigate('/signin');
+    } catch (error: any) {
       console.error('Sign up error:', error);
+      toast({
+        title: "Sign Up Failed",
+        description: error.message || "Failed to create account. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
