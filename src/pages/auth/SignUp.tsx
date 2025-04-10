@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,9 +19,19 @@ const SignUp = () => {
 
   // More comprehensive email validation
   const validateEmail = (email: string) => {
-    // RFC 5322 compliant regex
+    // Basic validation first to catch most common errors
+    if (!email || !email.includes('@') || !email.includes('.')) return false;
+    
+    // Trim the email before validation
+    const trimmedEmail = email.trim();
+    
+    // Check for common invalid patterns
+    if (trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return false;
+    if (trimmedEmail.indexOf('@') !== trimmedEmail.lastIndexOf('@')) return false;
+    
+    // RFC 5322 compliant regex for thorough validation
     const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(String(email).toLowerCase());
+    return re.test(trimmedEmail.toLowerCase());
   };
 
   const validatePassword = () => {
@@ -62,12 +71,22 @@ const SignUp = () => {
       setIsSubmitting(true);
       await signUp(email, password, name);
       
-      // Navigate directly to dashboard after sign up
-      // Note: This will only work if email confirmation is disabled in Supabase
-      navigate('/dashboard');
+      // Navigate to sign in page after successful sign up
+      // Since we know email confirmation might be required
+      toast({
+        title: "Account created",
+        description: "Please check your email for verification instructions or log in if verification is disabled.",
+      });
+      navigate('/signin');
     } catch (error: any) {
       console.error('Sign up error:', error);
-      setErrorMessage(error.message || "Failed to create account. Please try again.");
+      
+      // Display specific error message for signups disabled
+      if (error.message?.includes('Signups are currently disabled')) {
+        setErrorMessage("New account creation is currently disabled by the administrator. Please contact support for assistance.");
+      } else {
+        setErrorMessage(error.message || "Failed to create account. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

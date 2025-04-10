@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,17 +15,21 @@ const SignIn = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // More comprehensive email validation
   const validateEmail = (email: string) => {
-    // RFC 5322 compliant regex
+    if (!email || !email.includes('@') || !email.includes('.')) return false;
+    
+    const trimmedEmail = email.trim();
+    
+    if (trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return false;
+    if (trimmedEmail.indexOf('@') !== trimmedEmail.lastIndexOf('@')) return false;
+    
     const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(String(email).toLowerCase());
+    return re.test(trimmedEmail.toLowerCase());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear previous error messages
     setErrorMessage(null);
     
     if (!email || !password) {
@@ -46,9 +49,10 @@ const SignIn = () => {
     } catch (error: any) {
       console.error('Sign in error:', error);
       
-      // Handle specific error for email not confirmed
       if (error.message?.includes('Email not confirmed')) {
         setErrorMessage('Please verify your email before signing in. Check your inbox for a confirmation link.');
+      } else if (error.message?.includes('Invalid login credentials')) {
+        setErrorMessage('Invalid email or password. Please check your credentials.');
       } else {
         setErrorMessage(error.message || 'Failed to sign in. Please check your credentials.');
       }
@@ -79,7 +83,7 @@ const SignIn = () => {
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: email,
+        email: email.trim().toLowerCase(),
       });
 
       if (error) throw error;

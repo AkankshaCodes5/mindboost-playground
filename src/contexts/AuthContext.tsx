@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (data: { name?: string, avatar_url?: string }) => Promise<void>;
+  createUserDirectly: (email: string, password: string, name: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,12 +52,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  const createUserDirectly = async (email: string, password: string, name: string) => {
+    setLoading(true);
+    
+    try {
+      // Clean email by trimming and converting to lowercase
+      const cleanEmail = email.trim().toLowerCase();
+      
+      // Try to sign in directly
+      const { error, data } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      
+      if (error) {
+        // If the user doesn't exist, we can't create them due to restrictions
+        throw new Error("Login failed. Please check with the administrator about account creation.");
+      }
+      
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to log in",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);
     
     try {
+      // Clean email by trimming and converting to lowercase
+      const cleanEmail = email.trim().toLowerCase();
+      
       const { error, data } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           data: {
@@ -67,6 +104,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        if (error.message.includes('Signups not allowed')) {
+          throw new Error('Signups are currently disabled. Please contact the administrator.');
+        }
         throw error;
       }
 
@@ -90,8 +130,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
+      // Clean email by trimming and converting to lowercase
+      const cleanEmail = email.trim().toLowerCase();
+      
       const { error, data } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
       
@@ -209,7 +252,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signOut,
     resetPassword,
-    updateProfile
+    updateProfile,
+    createUserDirectly
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
