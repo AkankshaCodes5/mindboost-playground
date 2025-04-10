@@ -14,13 +14,12 @@ const SignUp = () => {
   const [passwordError, setPasswordError] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signUp, createUserDirectly } = useAuth();
+  const { createUserDirectly } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // More comprehensive email validation
   const validateEmail = (email: string) => {
-    // Basic validation first to catch most common errors
     if (!email || !email.includes('@') || !email.includes('.')) return false;
     
     // Trim the email before validation
@@ -71,29 +70,17 @@ const SignUp = () => {
     try {
       setIsSubmitting(true);
       
-      // Try to directly create/sign in the user without verification
-      try {
-        await createUserDirectly(email, password, name);
-        toast({
-          title: "Welcome!",
-          description: "Your account has been created and you've been logged in successfully.",
-        });
-        navigate('/dashboard');
-        return;
-      } catch (directError: any) {
-        // If direct creation fails, try regular signup
-        console.log("Direct user creation failed, trying regular signup:", directError);
-        
-        await signUp(email, password, name);
-        
-        // With normal signup flow, navigate directly to dashboard
-        // This assumes email verification is disabled in Supabase
-        toast({
-          title: "Account created",
-          description: "Your account has been created successfully.",
-        });
-        navigate('/dashboard');
-      }
+      // Use the direct user creation method
+      await createUserDirectly(email, password, name);
+      
+      // Show welcome message
+      toast({
+        title: "Welcome to MindBoost!",
+        description: "Your account has been created successfully.",
+      });
+      
+      // Navigate to dashboard directly
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Sign up error:', error);
       

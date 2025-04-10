@@ -36,6 +36,7 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   
   useEffect(() => {
     if (!loading && user && (location.pathname === '/signin' || location.pathname === '/signup' || location.pathname === '/')) {
+      // Redirect authenticated users to dashboard from auth pages
       navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate, location]);

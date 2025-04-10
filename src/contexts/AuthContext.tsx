@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Initial session fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -60,6 +62,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clean email by trimming and converting to lowercase
       const cleanEmail = email.trim().toLowerCase();
       
+      console.log("Attempting to create user directly:", cleanEmail);
+      
       // First, try to create the account directly
       const { error: signUpError, data: signUpData } = await supabase.auth.signUp({
         email: cleanEmail,
@@ -74,14 +78,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (signUpError) {
+        console.log("Sign up error:", signUpError);
         if (signUpError.message.includes('User already registered')) {
           // If user already exists, try to sign them in directly
+          console.log("User already exists, attempting sign in");
           const { error: signInError } = await supabase.auth.signInWithPassword({
             email: cleanEmail,
             password,
           });
           
-          if (signInError) throw signInError;
+          if (signInError) {
+            console.error("Sign in error after detecting existing user:", signInError);
+            throw signInError;
+          }
           
           toast({
             title: "Welcome back!",
@@ -93,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // If signup worked but needs verification, try sign in anyway
         if (signUpData.user && !signUpData.user.confirmed_at) {
+          console.log("User created but not confirmed, trying sign in anyway");
           // Try to immediately sign in even if email not confirmed
           await supabase.auth.signInWithPassword({
             email: cleanEmail,
@@ -106,6 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     } catch (error: any) {
+      console.error("Create user directly error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create account",
@@ -124,6 +135,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clean email by trimming and converting to lowercase
       const cleanEmail = email.trim().toLowerCase();
       
+      console.log("Attempting to sign up user:", cleanEmail);
+      
       const { error, data } = await supabase.auth.signUp({
         email: cleanEmail,
         password,
@@ -137,6 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        console.error("Sign up error:", error);
         if (error.message.includes('Signups not allowed')) {
           throw new Error('Signups are currently disabled. Please contact the administrator.');
         }
@@ -144,19 +158,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Try to sign in immediately after signup regardless of email confirmation
+      console.log("Sign up successful, attempting immediate sign in");
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
       
-      // We'll ignore signInError here as it might fail due to email not confirmed
-      // The user will still get redirected to the dashboard by the signup handler
+      if (signInError) {
+        console.warn("Immediate sign in after signup failed:", signInError);
+        // Ignore sign in errors here as user may need to verify email first
+      }
 
       toast({
         title: "Account created",
         description: "Your account has been created successfully.",
       });
     } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create account",
@@ -175,29 +193,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clean email by trimming and converting to lowercase
       const cleanEmail = email.trim().toLowerCase();
       
+      console.log("Attempting to sign in:", cleanEmail);
+      
       const { error, data } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
       
       if (error) {
+        console.error("Sign in error:", error);
         // Don't treat email not confirmed as an error - try to log in anyway
         if (error.message.includes('Email not confirmed')) {
-          // Attempt to sign in regardless of confirmation status
-          toast({
-            title: "Welcome back!",
-            description: "You have been logged in successfully.",
-          });
+          console.log("Email not confirmed, attempting to sign in anyway");
+          // We'll ignore this error and let the user in anyway
         } else {
           throw error;
         }
       } else {
+        console.log("Sign in successful");
         toast({
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
       }
     } catch (error: any) {
+      console.error("Sign in catch error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Invalid email or password",

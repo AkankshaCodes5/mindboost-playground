@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,7 +48,14 @@ const SignIn = () => {
       
       await signIn(email, password);
       
-      navigate('/dashboard');
+      // Show welcome message
+      toast({
+        title: "Welcome to MindBoost!",
+        description: "You've successfully logged in.",
+      });
+      
+      // Navigate to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Sign in error:', error);
       
