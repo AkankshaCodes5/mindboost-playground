@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,7 +14,7 @@ const SignUp = () => {
   const [passwordError, setPasswordError] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, createUserDirectly } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,21 +70,38 @@ const SignUp = () => {
     
     try {
       setIsSubmitting(true);
-      await signUp(email, password, name);
       
-      // Navigate to sign in page after successful sign up
-      // Since we know email confirmation might be required
-      toast({
-        title: "Account created",
-        description: "Please check your email for verification instructions or log in if verification is disabled.",
-      });
-      navigate('/signin');
+      // Try to directly create/sign in the user without verification
+      try {
+        await createUserDirectly(email, password, name);
+        toast({
+          title: "Welcome!",
+          description: "Your account has been created and you've been logged in successfully.",
+        });
+        navigate('/dashboard');
+        return;
+      } catch (directError: any) {
+        // If direct creation fails, try regular signup
+        console.log("Direct user creation failed, trying regular signup:", directError);
+        
+        await signUp(email, password, name);
+        
+        // With normal signup flow, navigate directly to dashboard
+        // This assumes email verification is disabled in Supabase
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully.",
+        });
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error('Sign up error:', error);
       
       // Display specific error message for signups disabled
       if (error.message?.includes('Signups are currently disabled')) {
         setErrorMessage("New account creation is currently disabled by the administrator. Please contact support for assistance.");
+      } else if (error.message?.includes('User already registered')) {
+        setErrorMessage("This email is already registered. Please log in instead.");
       } else {
         setErrorMessage(error.message || "Failed to create account. Please try again.");
       }

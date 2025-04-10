@@ -1,10 +1,11 @@
+
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProgressProvider } from "./contexts/ProgressContext";
 
 import SplashScreen from "./pages/SplashScreen";
@@ -27,6 +28,29 @@ import PrivateRoute from "./components/PrivateRoute";
 
 const queryClient = new QueryClient();
 
+// Auth wrapper component to redirect already authenticated users
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  useEffect(() => {
+    if (!loading && user && (location.pathname === '/signin' || location.pathname === '/signup' || location.pathname === '/')) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, loading, navigate, location]);
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mindboost-primary"></div>
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -38,11 +62,30 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/splash" element={<SplashScreen />} />
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
                 
+                {/* Auth routes with redirect for already authenticated users */}
+                <Route path="/signin" element={
+                  <AuthRoute>
+                    <SignIn />
+                  </AuthRoute>
+                } />
+                <Route path="/signup" element={
+                  <AuthRoute>
+                    <SignUp />
+                  </AuthRoute>
+                } />
+                <Route path="/forgot-password" element={
+                  <AuthRoute>
+                    <ForgotPassword />
+                  </AuthRoute>
+                } />
+                <Route path="/reset-password" element={
+                  <AuthRoute>
+                    <ResetPassword />
+                  </AuthRoute>
+                } />
+                
+                {/* Private routes that require authentication */}
                 <Route path="/dashboard" element={
                   <PrivateRoute>
                     <Dashboard />

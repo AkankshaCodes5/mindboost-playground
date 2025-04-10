@@ -44,14 +44,14 @@ const SignIn = () => {
     
     try {
       setIsSubmitting(true);
+      
       await signIn(email, password);
+      
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Sign in error:', error);
       
-      if (error.message?.includes('Email not confirmed')) {
-        setErrorMessage('Please verify your email before signing in. Check your inbox for a confirmation link.');
-      } else if (error.message?.includes('Invalid login credentials')) {
+      if (error.message?.includes('Invalid login credentials')) {
         setErrorMessage('Invalid email or password. Please check your credentials.');
       } else {
         setErrorMessage(error.message || 'Failed to sign in. Please check your credentials.');
