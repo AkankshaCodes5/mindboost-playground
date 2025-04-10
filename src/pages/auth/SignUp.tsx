@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -11,15 +12,17 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // More comprehensive email validation
   const validateEmail = (email: string) => {
-    // Basic email validation
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    // RFC 5322 compliant regex
+    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
   };
 
   const validatePassword = () => {
@@ -38,16 +41,20 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Clear any previous error messages
+    setErrorMessage(null);
+    
     if (!validatePassword()) {
       return;
     }
 
+    if (!email || !name) {
+      setErrorMessage('Please fill in all fields');
+      return;
+    }
+
     if (!validateEmail(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      });
+      setErrorMessage('Please enter a valid email address');
       return;
     }
     
@@ -55,21 +62,12 @@ const SignUp = () => {
       setIsSubmitting(true);
       await signUp(email, password, name);
       
-      // After successful signup, show a success message
-      toast({
-        title: "Success!",
-        description: "Your account has been created. Please check your email for verification.",
-      });
-      
-      // Navigate to signin page instead of dashboard since email verification is required
-      navigate('/signin');
+      // Navigate directly to dashboard after sign up
+      // Note: This will only work if email confirmation is disabled in Supabase
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Sign up error:', error);
-      toast({
-        title: "Sign Up Failed",
-        description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive"
-      });
+      setErrorMessage(error.message || "Failed to create account. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -103,6 +101,12 @@ const SignUp = () => {
         <div className="bg-white rounded-xl shadow-md p-5">
           <h2 className="text-xl font-semibold text-mindboost-dark mb-2 text-center">Create Account</h2>
           <p className="text-mindboost-gray text-center mb-3">Enter your details to sign up</p>
+          
+          {errorMessage && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1">

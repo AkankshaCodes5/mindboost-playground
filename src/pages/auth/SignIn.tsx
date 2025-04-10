@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -14,15 +14,20 @@ const SignIn = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
+  // More comprehensive email validation
   const validateEmail = (email: string) => {
-    // Basic email validation
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    // RFC 5322 compliant regex
+    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous error messages
+    setErrorMessage(null);
     
     if (!email || !password) {
       setErrorMessage('Please enter both email and password');
@@ -34,8 +39,6 @@ const SignIn = () => {
       return;
     }
     
-    setErrorMessage(null);
-    
     try {
       setIsSubmitting(true);
       await signIn(email, password);
@@ -46,20 +49,6 @@ const SignIn = () => {
       // Handle specific error for email not confirmed
       if (error.message?.includes('Email not confirmed')) {
         setErrorMessage('Please verify your email before signing in. Check your inbox for a confirmation link.');
-        
-        // Offer to resend confirmation email
-        toast({
-          title: "Email not verified",
-          description: "Please check your inbox for the verification email or click 'Resend' below.",
-          action: (
-            <button 
-              onClick={() => handleResendConfirmation()} 
-              className="bg-mindboost-primary text-white px-4 py-1 rounded text-xs"
-            >
-              Resend
-            </button>
-          ),
-        });
       } else {
         setErrorMessage(error.message || 'Failed to sign in. Please check your credentials.');
       }
@@ -140,6 +129,14 @@ const SignIn = () => {
           {errorMessage && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+              {errorMessage.includes('Email not confirmed') && (
+                <button 
+                  onClick={handleResendConfirmation} 
+                  className="bg-mindboost-primary text-white px-3 py-1 rounded text-xs mt-2"
+                >
+                  Resend Verification Email
+                </button>
+              )}
             </Alert>
           )}
 
