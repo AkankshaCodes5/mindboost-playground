@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,7 @@ const MatchingGame = () => {
   const [startTime, setStartTime] = useState<number>(0);
   const [endTime, setEndTime] = useState<number>(0);
   
-  const { addGameScore } = useProgress();
+  const { addMatchingGameScore } = useProgress();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -96,14 +96,14 @@ const MatchingGame = () => {
       const duration = (endTimeValue - startTime) / 1000;
       const score = Math.max(100 - (attempts - 6) * 10, 10);
       
-      addGameScore('matching', score, duration);
+      addMatchingGameScore(score, attempts, duration);
       
       toast({
         title: "Game Complete!",
         description: `You found all matches in ${attempts} attempts.`,
       });
     }
-  }, [matchedPairs, attempts, gameStarted, startTime, addGameScore, toast]);
+  }, [matchedPairs, attempts, gameStarted, startTime, addMatchingGameScore, toast]);
 
   const handleCardClick = (id: number) => {
     if (
