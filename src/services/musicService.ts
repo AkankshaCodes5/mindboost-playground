@@ -29,15 +29,14 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   try {
     const { data, error } = await supabase
       .from('music_tracks')
-      .select('*')
-      .order('title');
+      .select('*');
       
     if (error) throw error;
     
-    return data.map(convertDbTrackToClientFormat);
+    return (data || []).map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching music tracks:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -48,15 +47,14 @@ export const getUserMusicTracks = async (userId: string): Promise<MusicTrack[]> 
       .from('music_tracks')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_built_in', false)
-      .order('upload_time', { ascending: false });
+      .eq('is_built_in', false);
       
     if (error) throw error;
     
-    return data.map(convertDbTrackToClientFormat);
+    return (data || []).map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching user music tracks:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -98,7 +96,7 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
       .from('music')
       .getPublicUrl(fileName);
       
-    const filePath = publicUrlData.publicUrl;
+    const filePath = publicUrlData?.publicUrl || '';
     
     // 3. Create record in music_tracks table
     const { data: trackData, error: trackError } = await supabase
@@ -130,10 +128,12 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
       .eq('user_id', userId)
       .single();
       
-    if (fetchError) throw fetchError;
+    if (fetchError || !trackData) {
+      throw fetchError || new Error('Track not found');
+    }
     
     // 2. Delete from storage if it's stored in our bucket
-    if (trackData && trackData.file_path && trackData.file_path.includes('music')) {
+    if (trackData.file_path && trackData.file_path.includes('music')) {
       const filePath = trackData.file_path.split('/').slice(-2).join('/');
       
       const { error: deleteFileError } = await supabase.storage

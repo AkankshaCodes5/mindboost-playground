@@ -2,32 +2,32 @@
 import { supabase } from "@/integrations/supabase/customClient";
 
 // Types for game scores
-type BaseGameScore = {
+export type BaseGameScore = {
   gameType: 'matching' | 'number-recall' | 'object-sequencing' | 'stroop-test';
   userId: string;
   duration: number;
 };
 
-type MatchingGameScore = BaseGameScore & {
+export type MatchingGameScore = BaseGameScore & {
   gameType: 'matching';
   score: number;
   attempts: number;
 };
 
-type NumberRecallGameScore = BaseGameScore & {
+export type NumberRecallGameScore = BaseGameScore & {
   gameType: 'number-recall';
   identifiedCount: number;
   totalCount: number;
   userComments?: string;
 };
 
-type ObjectSequencingGameScore = BaseGameScore & {
+export type ObjectSequencingGameScore = BaseGameScore & {
   gameType: 'object-sequencing';
   isCorrect: boolean;
   attempts: number;
 };
 
-type StroopTestGameScore = BaseGameScore & {
+export type StroopTestGameScore = BaseGameScore & {
   gameType: 'stroop-test';
   row: number;
   column: number;
@@ -75,11 +75,10 @@ export const getGameScoresByType = async (gameType: string, userId: string) => {
       .from('game_scores')
       .select('*')
       .eq('game_type', gameType)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('user_id', userId);
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching game scores:', error);
     throw error;
@@ -98,7 +97,7 @@ export const getRecentGameScores = async (gameType: string, userId: string, limi
       .limit(limit);
       
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error fetching recent game scores:', error);
     throw error;

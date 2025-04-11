@@ -1,40 +1,9 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from "@/integrations/supabase/customClient";
 import { saveGameScore, getGameScoresByType, getRecentGameScores, GameScore } from '../services/gameService';
 import { getAllMusicTracks, getUserMusicTracks, uploadUserMusicTrack, deleteUserMusicTrack, MusicTrack } from '../services/musicService';
-
-// Enhanced Game Score Types
-type BaseGameScore = {
-  timestamp: number;
-  userId: string;
-  duration: number; // in seconds
-};
-
-type MatchingGameScore = BaseGameScore & {
-  gameType: 'matching';
-  score: number;
-  attempts: number;
-};
-
-type NumberRecallGameScore = BaseGameScore & {
-  gameType: 'number-recall';
-  identifiedCount: number;
-  totalCount: number;
-  userComments?: string;
-};
-
-type ObjectSequencingGameScore = BaseGameScore & {
-  gameType: 'object-sequencing';
-  isCorrect: boolean;
-  attempts: number;
-};
-
-type StroopTestGameScore = BaseGameScore & {
-  gameType: 'stroop-test';
-  row: number;
-  column: number;
-};
 
 // Water tracking
 type WaterLog = {
@@ -165,16 +134,15 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
 
   // Game score methods with Supabase integration
   const addMatchingGameScore = async (score: number, attempts: number, duration: number) => {
-    const newScore: MatchingGameScore = {
+    const newScore: GameScore = {
       gameType: 'matching',
-      timestamp: Date.now(),
       userId,
       score,
       attempts,
       duration
     };
     
-    setGameScores(prev => [...prev, newScore]);
+    setGameScores(prev => Array.isArray(prev) ? [...prev, newScore] : [newScore]);
     
     // Save to Supabase if user is authenticated
     if (user) {
@@ -187,9 +155,8 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addNumberRecallScore = async (identifiedCount: number, totalCount: number, duration: number, userComments?: string) => {
-    const newScore: NumberRecallGameScore = {
+    const newScore: GameScore = {
       gameType: 'number-recall',
-      timestamp: Date.now(),
       userId,
       identifiedCount,
       totalCount,
@@ -197,7 +164,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       userComments
     };
     
-    setGameScores(prev => [...prev, newScore]);
+    setGameScores(prev => Array.isArray(prev) ? [...prev, newScore] : [newScore]);
     
     // Save to Supabase if user is authenticated
     if (user) {
@@ -210,16 +177,15 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addObjectSequencingScore = async (isCorrect: boolean, attempts: number, duration: number) => {
-    const newScore: ObjectSequencingGameScore = {
+    const newScore: GameScore = {
       gameType: 'object-sequencing',
-      timestamp: Date.now(),
       userId,
       isCorrect,
       attempts,
       duration
     };
     
-    setGameScores(prev => [...prev, newScore]);
+    setGameScores(prev => Array.isArray(prev) ? [...prev, newScore] : [newScore]);
     
     // Save to Supabase if user is authenticated
     if (user) {
@@ -232,16 +198,15 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addStroopTestScore = async (row: number, column: number, duration: number) => {
-    const newScore: StroopTestGameScore = {
+    const newScore: GameScore = {
       gameType: 'stroop-test',
-      timestamp: Date.now(),
       userId,
       row,
       column,
       duration
     };
     
-    setGameScores(prev => [...prev, newScore]);
+    setGameScores(prev => Array.isArray(prev) ? [...prev, newScore] : [newScore]);
     
     // Save to Supabase if user is authenticated
     if (user) {
@@ -253,22 +218,6 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getGameScoresByType = (gameType: string) => {
-    return gameScores.filter(score => score.gameType === gameType);
-  };
-
-  const getRecentGameScores = (gameType: string, limit: number = 5) => {
-    return gameScores
-      .filter(score => score.gameType === gameType && score.userId === userId)
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, limit);
-  };
-
-  // Water tracking methods
-  const addWaterLog = (amount: number) => {
-    setWaterLogs(prev => [...prev, { timestamp: Date.now(), userId, amount }]);
-  };
-
   // Helper to get start of today's date in milliseconds
   const getStartOfToday = () => {
     const now = new Date();
@@ -276,11 +225,20 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     return now.getTime();
   };
 
-  // Helper to get start of a specific day
-  const getStartOfDay = (timestamp: number) => {
-    const date = new Date(timestamp);
-    date.setHours(0, 0, 0, 0);
-    return date.getTime();
+  // Game scoring methods
+  const getScoresByType = (scores: GameScore[], gameType: string) => {
+    return scores.filter(score => score.gameType === gameType);
+  };
+
+  const getRecentScores = (scores: GameScore[], gameType: string, limit: number = 5) => {
+    return scores
+      .filter(score => score.gameType === gameType && score.userId === userId)
+      .slice(0, limit);
+  };
+
+  // Water tracking methods
+  const addWaterLog = (amount: number) => {
+    setWaterLogs(prev => Array.isArray(prev) ? [...prev, { timestamp: Date.now(), userId, amount }] : [{ timestamp: Date.now(), userId, amount }]);
   };
 
   const getTotalWaterToday = () => {
@@ -305,15 +263,11 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
 
   // Meditation tracking methods
   const addMeditationSession = (duration: number, concentrationImprovement?: number) => {
-    setMeditationSessions(prev => [
-      ...prev, 
-      { 
-        timestamp: Date.now(), 
-        userId, 
-        duration,
-        concentrationImprovement 
-      }
-    ]);
+    setMeditationSessions(prev => 
+      Array.isArray(prev) ? 
+      [...prev, { timestamp: Date.now(), userId, duration, concentrationImprovement }] : 
+      [{ timestamp: Date.now(), userId, duration, concentrationImprovement }]
+    );
   };
 
   const getMeditationMinutesToday = () => {
@@ -345,7 +299,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     
     // Only add if it doesn't exist already
     if (!musicTracks.some(track => track.id === id)) {
-      setMusicTracks(prev => [...prev, newTrack]);
+      setMusicTracks(prev => Array.isArray(prev) ? [...prev, newTrack] : [newTrack]);
     }
   };
 
@@ -359,7 +313,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       uploadTime: new Date().toISOString()
     };
     
-    setMusicTracks(prev => [...prev, newTrack]);
+    setMusicTracks(prev => Array.isArray(prev) ? [...prev, newTrack] : [newTrack]);
     
     // Upload to Supabase if user is authenticated and file provided
     if (user && file) {
@@ -377,9 +331,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     const endOfToday = startOfToday + 24 * 60 * 60 * 1000 - 1;
     
     const todayGameScores = gameScores.filter(
-      score => score.timestamp >= startOfToday && 
-               score.timestamp <= endOfToday &&
-               score.userId === userId
+      score => score.userId === userId
     );
     
     return {
@@ -403,9 +355,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
       
       const dayGameScores = gameScores.filter(
-        score => score.timestamp >= startOfDay && 
-                 score.timestamp <= endOfDay &&
-                 score.userId === userId
+        score => score.userId === userId
       );
       
       const dayMeditationSessions = meditationSessions.filter(
@@ -452,54 +402,56 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
         const stroopTestScores = await getGameScoresByType('stroop-test', userId);
         
         // Process and combine the scores
-        const allScores = [
-          ...matchingScores,
-          ...numberRecallScores,
-          ...objectSequencingScores,
-          ...stroopTestScores
-        ].map(dbScore => {
-          const gameType = dbScore.game_type;
-          const score = dbScore.score;
-          const base = {
-            timestamp: new Date(dbScore.created_at).getTime(),
+        const allScores: GameScore[] = [];
+        
+        // Process matching scores
+        matchingScores.forEach(dbScore => {
+          const score = dbScore.score || {};
+          allScores.push({
+            gameType: 'matching' as const,
             userId: dbScore.user_id,
-            duration: score.duration || 0
-          };
-          
-          switch (gameType) {
-            case 'matching':
-              return {
-                ...base, 
-                gameType: 'matching' as const,
-                score: score.score,
-                attempts: score.attempts
-              };
-            case 'number-recall':
-              return {
-                ...base, 
-                gameType: 'number-recall' as const,
-                identifiedCount: score.identifiedCount,
-                totalCount: score.totalCount,
-                userComments: dbScore.comments
-              };
-            case 'object-sequencing':
-              return {
-                ...base, 
-                gameType: 'object-sequencing' as const,
-                isCorrect: score.isCorrect,
-                attempts: score.attempts
-              };
-            case 'stroop-test':
-              return {
-                ...base, 
-                gameType: 'stroop-test' as const,
-                row: score.row,
-                column: score.column
-              };
-            default:
-              return null;
-          }
-        }).filter(Boolean) as GameScore[];
+            duration: score.duration || 0,
+            score: score.score || 0,
+            attempts: score.attempts || 0
+          });
+        });
+        
+        // Process number recall scores
+        numberRecallScores.forEach(dbScore => {
+          const score = dbScore.score || {};
+          allScores.push({
+            gameType: 'number-recall' as const,
+            userId: dbScore.user_id,
+            duration: score.duration || 0,
+            identifiedCount: score.identifiedCount || 0,
+            totalCount: score.totalCount || 0,
+            userComments: dbScore.comments || undefined
+          });
+        });
+        
+        // Process object sequencing scores
+        objectSequencingScores.forEach(dbScore => {
+          const score = dbScore.score || {};
+          allScores.push({
+            gameType: 'object-sequencing' as const,
+            userId: dbScore.user_id,
+            duration: score.duration || 0,
+            isCorrect: score.isCorrect || false,
+            attempts: score.attempts || 0
+          });
+        });
+        
+        // Process stroop test scores
+        stroopTestScores.forEach(dbScore => {
+          const score = dbScore.score || {};
+          allScores.push({
+            gameType: 'stroop-test' as const,
+            userId: dbScore.user_id,
+            duration: score.duration || 0,
+            row: score.row || 0,
+            column: score.column || 0
+          });
+        });
         
         setGameScores(allScores);
       } catch (error) {
@@ -515,7 +467,9 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     const fetchMusicTracks = async () => {
       try {
         const tracks = await getAllMusicTracks();
-        setMusicTracks(tracks);
+        if (Array.isArray(tracks)) {
+          setMusicTracks(tracks);
+        }
       } catch (error) {
         console.error('Error fetching music tracks from Supabase:', error);
       }
@@ -524,17 +478,6 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     fetchMusicTracks();
   }, [user]);
 
-  const getAllMusicTracksFromState = () => {
-    return [
-      ...musicTracks.filter(track => track.isBuiltIn),
-      ...musicTracks.filter(track => !track.isBuiltIn && track.userId === userId)
-    ];
-  };
-
-  const getUserMusicTracksFromState = () => {
-    return musicTracks.filter(track => !track.isBuiltIn && track.userId === userId);
-  };
-
   const value = {
     // Game methods
     gameScores,
@@ -542,8 +485,8 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     addNumberRecallScore,
     addObjectSequencingScore,
     addStroopTestScore,
-    getGameScoresByType,
-    getRecentGameScores,
+    getGameScoresByType: (gameType: string) => getScoresByType(gameScores, gameType),
+    getRecentGameScores: (gameType: string) => getRecentScores(gameScores, gameType),
     
     // Water tracking
     waterLogs,
@@ -564,8 +507,8 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     musicTracks,
     addBuiltInMusicTrack,
     addUserMusicTrack,
-    getAllMusicTracks: getAllMusicTracksFromState,
-    getUserMusicTracks: getUserMusicTracksFromState,
+    getAllMusicTracks: () => musicTracks.filter(track => track.isBuiltIn || track.userId === userId),
+    getUserMusicTracks: () => musicTracks.filter(track => !track.isBuiltIn && track.userId === userId),
     
     // Progress analysis
     getDailyProgressSummary,

@@ -5,7 +5,8 @@ import { supabase as originalSupabase } from "./client";
 // This is a workaround for TypeScript errors until types.ts gets updated
 const supabase = {
   ...originalSupabase,
-  from: (table: string) => originalSupabase.from(table as any)
+  from: (table: string) => originalSupabase.from(table as any),
+  storage: originalSupabase.storage
 };
 
 export { supabase };
