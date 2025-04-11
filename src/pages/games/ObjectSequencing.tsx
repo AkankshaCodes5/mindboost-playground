@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -22,7 +21,7 @@ const ObjectSequencing = () => {
   const [correctPositions, setCorrectPositions] = useState(0);
   const [startTime, setStartTime] = useState(0);
   
-  const { addGameScore } = useProgress();
+  const { addObjectSequencingScore } = useProgress();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -47,12 +46,10 @@ const ObjectSequencing = () => {
   }, [gameState, countdownTime]);
 
   const startNewGame = () => {
-    // Select 5 random emojis
     const selectedEmojis = [...emojis]
       .sort(() => 0.5 - Math.random())
       .slice(0, 5);
     
-    // Create sequence
     const sequence = selectedEmojis.map((emoji, index) => ({
       id: index,
       emoji
@@ -74,7 +71,6 @@ const ObjectSequencing = () => {
     setUserSequence(prev => [...prev, item]);
     setAvailableObjects(prev => prev.filter(obj => obj.id !== item.id));
     
-    // Check if all objects are placed
     if (userSequence.length === objects.length - 1) {
       checkResult([...userSequence, item]);
     }
@@ -83,7 +79,6 @@ const ObjectSequencing = () => {
   const checkResult = (sequence: ObjectItem[]) => {
     setAttempts(prev => prev + 1);
     
-    // Count correct positions
     let correct = 0;
     sequence.forEach((item, index) => {
       if (item.id === objects[index].id) {
@@ -93,11 +88,10 @@ const ObjectSequencing = () => {
     
     setCorrectPositions(correct);
     
-    // Calculate score
-    const score = Math.round((correct / objects.length) * 100);
+    const isCorrect = correct === objects.length;
     const duration = (Date.now() - startTime) / 1000;
     
-    addGameScore('object-sequencing', score, duration);
+    addObjectSequencingScore(isCorrect, attempts + 1, duration);
     
     setGameState('completed');
     
@@ -127,7 +121,6 @@ const ObjectSequencing = () => {
           </p>
         </div>
         
-        {/* Memorizing state */}
         {gameState === 'memorizing' && (
           <>
             <div className="bg-mindboost-primary text-white p-3 rounded-lg mb-4 flex justify-between">
@@ -156,7 +149,6 @@ const ObjectSequencing = () => {
           </>
         )}
         
-        {/* Sequencing state */}
         {gameState === 'sequencing' && (
           <>
             <div className="mb-6">
@@ -207,7 +199,6 @@ const ObjectSequencing = () => {
           </>
         )}
         
-        {/* Completed state */}
         {gameState === 'completed' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

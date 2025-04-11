@@ -30,7 +30,7 @@ const StroopTest = () => {
   const [col, setCol] = useState(0);
   const [startTime, setStartTime] = useState(0);
   
-  const { addGameScore } = useProgress();
+  const { addStroopTestScore } = useProgress();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -90,7 +90,7 @@ const StroopTest = () => {
     const finalScore = score;
     const duration = (Date.now() - startTime) / 1000;
     
-    addGameScore('stroop-test', finalScore, duration);
+    addStroopTestScore(row, col, duration);
     
     toast({
       title: "Test Complete!",

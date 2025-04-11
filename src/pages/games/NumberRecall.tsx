@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -23,12 +22,11 @@ const NumberRecall = () => {
   const [ascending, setAscending] = useState<boolean>(true);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { addGameScore } = useProgress();
+  const { addNumberRecallScore } = useProgress();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const startGame = () => {
-    // Generate grid with numbers 1-25 in random positions
     const newGrid = Array(25)
       .fill(0)
       .map((_, index) => ({
@@ -41,11 +39,10 @@ const NumberRecall = () => {
     setTimeLeft(20);
     setUserAnswer('');
     setCorrectNumbers(0);
-    setAscending(Math.random() > 0.5); // Randomly choose ascending or descending
+    setAscending(Math.random() > 0.5);
     setGameState('memorizing');
     setStartTime(Date.now());
     
-    // Start countdown
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -60,7 +57,6 @@ const NumberRecall = () => {
 
   useEffect(() => {
     return () => {
-      // Clean up timer on unmount
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -82,12 +78,10 @@ const NumberRecall = () => {
     setEndTime(Date.now());
     setGameState('completed');
     
-    // Calculate score based on correctness
     const maxPossible = 25;
-    const score = Math.round((answer / maxPossible) * 100);
     const duration = (Date.now() - startTime) / 1000;
     
-    addGameScore('number-recall', score, duration);
+    addNumberRecallScore(answer, maxPossible, duration);
     
     setCorrectNumbers(answer);
     
