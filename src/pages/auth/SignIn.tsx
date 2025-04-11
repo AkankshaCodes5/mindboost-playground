@@ -3,111 +3,29 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const validateEmail = (email: string) => {
-    if (!email || !email.includes('@') || !email.includes('.')) return false;
-    
-    const trimmedEmail = email.trim();
-    
-    if (trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return false;
-    if (trimmedEmail.indexOf('@') !== trimmedEmail.lastIndexOf('@')) return false;
-    
-    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(trimmedEmail.toLowerCase());
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    setErrorMessage(null);
-    
     if (!email || !password) {
-      setErrorMessage('Please enter both email and password');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setErrorMessage('Please enter a valid email address');
       return;
     }
     
     try {
       setIsSubmitting(true);
-      console.log("Starting sign-in process");
-      
       await signIn(email, password);
-      
-      // Show welcome message
-      toast({
-        title: "Welcome to MindBoost!",
-        description: "You've successfully logged in.",
-      });
-      
-      console.log("Sign in successful, redirecting to dashboard");
-      // Navigate to dashboard - should happen automatically via AuthContext
-      navigate('/dashboard', { replace: true });
-    } catch (error: any) {
+      navigate('/dashboard');
+    } catch (error) {
       console.error('Sign in error:', error);
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        setErrorMessage('Invalid email or password. Please check your credentials.');
-      } else {
-        setErrorMessage(error.message || 'Failed to sign in. Please check your credentials.');
-      }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (!email) {
-      toast({
-        title: "Error",
-        description: "Please enter your email address first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email.trim().toLowerCase(),
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Confirmation email sent",
-        description: "Please check your inbox for the verification link",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to resend confirmation email",
-        variant: "destructive",
-      });
     }
   };
 
@@ -139,20 +57,6 @@ const SignIn = () => {
         <div className="bg-white rounded-xl shadow-md p-5">
           <h2 className="text-lg font-semibold text-mindboost-dark mb-2 text-center">Log In</h2>
           <p className="text-mindboost-gray text-center mb-3 text-xs">Enter your email & password to log in</p>
-
-          {errorMessage && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
-              {errorMessage.includes('Email not confirmed') && (
-                <button 
-                  onClick={handleResendConfirmation} 
-                  className="bg-mindboost-primary text-white px-3 py-1 rounded text-xs mt-2"
-                >
-                  Resend Verification Email
-                </button>
-              )}
-            </Alert>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1">

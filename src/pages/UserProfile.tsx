@@ -1,97 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import { useState } from 'react';
 import MobileLayout from '../components/MobileLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
-import { getProfile, updateProfile, getWeeklyActivitySummary } from '@/services/api';
 import { motion } from 'framer-motion';
 import { BarChart2, User, Settings, Award, AlertCircle } from 'lucide-react';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const { dailyWaterGoal, setDailyWaterGoal } = useProgress();
   const [isEditing, setIsEditing] = useState(false);
   const [waterGoal, setWaterGoal] = useState(dailyWaterGoal);
-  const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activityStats, setActivityStats] = useState({
-    gamesPlayed: 0,
-    meditationMinutes: 0,
-  });
-
-  useEffect(() => {
-    const loadProfileData = async () => {
-      if (!user) return;
-      
-      setIsLoading(true);
-      try {
-        // Set default profile data from auth user
-        const defaultProfile = getUserProfileFromUser(user);
-        
-        try {
-          // Load profile from database if Supabase is configured
-          const profileData = await getProfile();
-          if (profileData) {
-            setProfile({
-              name: profileData.name,
-              email: profileData.email
-            });
-          } else {
-            // Fallback if profile not found
-            setProfile(defaultProfile);
-          }
-          
-          // Load activity stats
-          try {
-            const activitySummary = await getWeeklyActivitySummary();
-            
-            // Calculate games played
-            const gamesPlayed = 
-              (activitySummary['memory_game']?.count || 0);
-            
-            // Calculate meditation minutes
-            const meditationMinutes = 
-              (activitySummary['meditation']?.totalDuration || 0) / 60; // Convert seconds to minutes
-            
-            setActivityStats({
-              gamesPlayed,
-              meditationMinutes: Math.round(meditationMinutes)
-            });
-          } catch (error) {
-            console.error('Error loading activity data:', error);
-            // Keep default stats (0 values)
-          }
-        } catch (error) {
-          console.error('Error loading profile data:', error);
-          // Fallback if profile loading fails
-          setProfile(defaultProfile);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    // Extract user profile from user object
-    const getUserProfileFromUser = (user: any) => {
-      if (!user) return { name: 'User', email: '' };
-      
-      // Try to get name from user_metadata
-      const userMetadata = user.user_metadata as { name?: string } | undefined;
-      const name = userMetadata?.name || (user.email ? user.email.split('@')[0] : 'User');
-      
-      return {
-        name,
-        email: user.email || ''
-      };
-    };
-    
-    loadProfileData();
-  }, [user]);
-
-  useEffect(() => {
-    setWaterGoal(dailyWaterGoal);
-  }, [dailyWaterGoal]);
 
   const handleWaterGoalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -100,14 +19,9 @@ const UserProfile = () => {
     }
   };
 
-  const saveWaterGoal = async () => {
-    await setDailyWaterGoal(waterGoal);
+  const saveWaterGoal = () => {
+    setDailyWaterGoal(waterGoal);
     setIsEditing(false);
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/signin');
   };
 
   return (
@@ -121,21 +35,15 @@ const UserProfile = () => {
         >
           {/* User info card */}
           <div className="bg-white rounded-xl shadow-sm p-5">
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-mindboost-primary"></div>
+            <div className="flex items-center">
+              <div className="w-16 h-16 rounded-full bg-mindboost-primary flex items-center justify-center text-white text-2xl font-semibold">
+                {user?.name.charAt(0).toUpperCase()}
               </div>
-            ) : (
-              <div className="flex items-center">
-                <div className="w-16 h-16 rounded-full bg-mindboost-primary flex items-center justify-center text-white text-2xl font-semibold">
-                  {profile?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-xl font-semibold">{profile?.name || 'User'}</h2>
-                  <p className="text-gray-500">{profile?.email || user?.email || 'No email provided'}</p>
-                </div>
+              <div className="ml-4">
+                <h2 className="text-xl font-semibold">{user?.name}</h2>
+                <p className="text-gray-500">{user?.email}</p>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Stats overview */}
@@ -147,11 +55,11 @@ const UserProfile = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Memory Games Played</p>
-                <p className="text-xl font-semibold">{activityStats.gamesPlayed}</p>
+                <p className="text-xl font-semibold">0</p>
               </div>
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Meditation Minutes</p>
-                <p className="text-xl font-semibold">{activityStats.meditationMinutes}</p>
+                <p className="text-xl font-semibold">0</p>
               </div>
               <div className="bg-mindboost-lightGray rounded-lg p-3">
                 <p className="text-xs text-gray-500">Water Intake Goal</p>
@@ -223,7 +131,7 @@ const UserProfile = () => {
 
           {/* Logout button */}
           <button
-            onClick={handleSignOut}
+            onClick={signOut}
             className="w-full p-3 bg-red-100 text-red-600 rounded-lg font-medium"
           >
             Sign Out

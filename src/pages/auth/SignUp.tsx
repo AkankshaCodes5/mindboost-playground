@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -12,27 +10,9 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { createUserDirectly } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // More comprehensive email validation
-  const validateEmail = (email: string) => {
-    if (!email || !email.includes('@') || !email.includes('.')) return false;
-    
-    // Trim the email before validation
-    const trimmedEmail = email.trim();
-    
-    // Check for common invalid patterns
-    if (trimmedEmail.startsWith('@') || trimmedEmail.endsWith('@')) return false;
-    if (trimmedEmail.indexOf('@') !== trimmedEmail.lastIndexOf('@')) return false;
-    
-    // RFC 5322 compliant regex for thorough validation
-    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(trimmedEmail.toLowerCase());
-  };
 
   const validatePassword = () => {
     if (password !== confirmPassword) {
@@ -50,50 +30,16 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear any previous error messages
-    setErrorMessage(null);
-    
     if (!validatePassword()) {
-      return;
-    }
-
-    if (!email || !name) {
-      setErrorMessage('Please fill in all fields');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setErrorMessage('Please enter a valid email address');
       return;
     }
     
     try {
       setIsSubmitting(true);
-      console.log("Starting user creation process");
-      
-      // Use the direct user creation method that handles sign-in afterward
-      await createUserDirectly(email, password, name);
-      
-      // Show welcome message
-      toast({
-        title: "Welcome to MindBoost!",
-        description: "Your account has been created successfully.",
-      });
-      
-      console.log("User created successfully, redirecting to dashboard");
-      // Navigate to dashboard directly - should happen automatically via AuthContext
-      navigate('/dashboard', { replace: true });
-    } catch (error: any) {
+      await signUp(name, email, password);
+      navigate('/dashboard');
+    } catch (error) {
       console.error('Sign up error:', error);
-      
-      // Display specific error message for signups disabled
-      if (error.message?.includes('Signups are currently disabled')) {
-        setErrorMessage("New account creation is currently disabled by the administrator. Please contact support for assistance.");
-      } else if (error.message?.includes('User already registered')) {
-        setErrorMessage("This email is already registered. Please log in instead.");
-      } else {
-        setErrorMessage(error.message || "Failed to create account. Please try again.");
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -127,12 +73,6 @@ const SignUp = () => {
         <div className="bg-white rounded-xl shadow-md p-5">
           <h2 className="text-xl font-semibold text-mindboost-dark mb-2 text-center">Create Account</h2>
           <p className="text-mindboost-gray text-center mb-3">Enter your details to sign up</p>
-          
-          {errorMessage && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
-            </Alert>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-1">
