@@ -11,26 +11,19 @@ export type MusicTrack = {
   uploadTime?: string;
 };
 
-// Safe type assertion for database results
-const assertDbResult = <T>(data: any): T => {
-  if (data === null) {
-    return [] as unknown as T;
-  }
-  return data as T;
+// Type guard to ensure database results are valid
+const isValidData = (data: unknown): data is Record<string, any>[] => {
+  return Array.isArray(data) && data.every(item => item && typeof item === 'object');
 };
 
-// Convert db track to client format
-const convertDbTrackToClientFormat = (track: any): MusicTrack => {
-  if (!track || typeof track !== 'object') {
-    throw new Error('Invalid track data');
-  }
-  
+// Convert db track to client format with type safety
+const convertDbTrackToClientFormat = (track: Record<string, any>): MusicTrack => {
   return {
-    id: track.id,
-    title: track.title,
+    id: track.id || '',
+    title: track.title || '',
     artist: track.artist,
-    isBuiltIn: track.is_built_in,
-    filePath: track.file_path,
+    isBuiltIn: Boolean(track.is_built_in),
+    filePath: track.file_path || '',
     userId: track.user_id,
     uploadTime: track.upload_time
   };
@@ -45,7 +38,11 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
       
     if (error) throw error;
     
-    return assertDbResult<any[]>(data || []).map(convertDbTrackToClientFormat);
+    if (!isValidData(data)) {
+      return [];
+    }
+    
+    return data.map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching music tracks:', error);
     return [];
@@ -63,7 +60,11 @@ export const getUserMusicTracks = async (userId: string): Promise<MusicTrack[]> 
       
     if (error) throw error;
     
-    return assertDbResult<any[]>(data || []).map(convertDbTrackToClientFormat);
+    if (!isValidData(data)) {
+      return [];
+    }
+    
+    return data.map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching user music tracks:', error);
     return [];
@@ -108,7 +109,6 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
       .from('music')
       .getPublicUrl(fileName);
       
-    // Use optional chaining to safely access the URL
     const filePath = publicUrlData?.publicUrl || '';
     
     // 3. Create record in music_tracks table
@@ -136,7 +136,7 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
     // 1. Get track info
     const { data: trackData, error: fetchError } = await supabase
       .from('music_tracks')
-      .select('*') // Using * instead of just file_path
+      .select('*')
       .eq('id', trackId)
       .eq('user_id', userId)
       .single();
@@ -145,11 +145,11 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
       throw fetchError;
     }
     
-    if (!trackData) {
+    if (!trackData || typeof trackData !== 'object') {
       throw new Error('Track not found');
     }
     
-    const filePath = trackData.file_path;
+    const filePath = trackData.file_path || '';
     
     // 2. Delete from storage if it's stored in our bucket
     if (filePath && typeof filePath === 'string' && filePath.includes('music')) {

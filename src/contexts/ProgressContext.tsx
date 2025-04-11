@@ -24,7 +24,7 @@ type ProgressContextType = {
   // Game methods
   gameScores: GameScore[];
   addMatchingGameScore: (score: number, attempts: number, duration: number) => void;
-  addNumberRecallScore: (identifiedCount: number, totalCount: number, duration: number, comments?: string) => void;
+  addNumberRecallScore: (identifiedCount: number, totalCount: number, duration: number, userComments?: string) => void;
   addObjectSequencingScore: (isCorrect: boolean, attempts: number, duration: number) => void;
   addStroopTestScore: (row: number, column: number, duration: number) => void;
   getGameScoresByType: (gameType: string) => GameScore[];
@@ -98,10 +98,22 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
         const storedMusicTracks = localStorage.getItem('mindboost_music_tracks');
         const storedWaterGoal = localStorage.getItem('mindboost_water_goal');
         
-        if (storedGameScores) setGameScores(JSON.parse(storedGameScores));
-        if (storedWaterLogs) setWaterLogs(JSON.parse(storedWaterLogs));
-        if (storedMeditationSessions) setMeditationSessions(JSON.parse(storedMeditationSessions));
-        if (storedMusicTracks) setMusicTracks(JSON.parse(storedMusicTracks));
+        if (storedGameScores) {
+          const parsedScores = JSON.parse(storedGameScores);
+          setGameScores(Array.isArray(parsedScores) ? parsedScores : []);
+        }
+        if (storedWaterLogs) {
+          const parsedLogs = JSON.parse(storedWaterLogs);
+          setWaterLogs(Array.isArray(parsedLogs) ? parsedLogs : []);
+        }
+        if (storedMeditationSessions) {
+          const parsedSessions = JSON.parse(storedMeditationSessions);
+          setMeditationSessions(Array.isArray(parsedSessions) ? parsedSessions : []);
+        }
+        if (storedMusicTracks) {
+          const parsedTracks = JSON.parse(storedMusicTracks);
+          setMusicTracks(Array.isArray(parsedTracks) ? parsedTracks : []);
+        }
         if (storedWaterGoal) setDailyWaterGoal(JSON.parse(storedWaterGoal));
       } catch (error) {
         console.error("Error loading data from localStorage:", error);
@@ -404,10 +416,18 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       
       try {
         // Fetch all game types
-        const matchingScores = await getGameScoresByType('matching', userId);
-        const numberRecallScores = await getGameScoresByType('number-recall', userId);
-        const objectSequencingScores = await getGameScoresByType('object-sequencing', userId);
-        const stroopTestScores = await getGameScoresByType('stroop-test', userId);
+        const matchingScoresPromise = getGameScoresByType('matching', userId);
+        const numberRecallScoresPromise = getGameScoresByType('number-recall', userId);
+        const objectSequencingScoresPromise = getGameScoresByType('object-sequencing', userId);
+        const stroopTestScoresPromise = getGameScoresByType('stroop-test', userId);
+        
+        const [matchingScores, numberRecallScores, objectSequencingScores, stroopTestScores] = 
+          await Promise.all([
+            matchingScoresPromise, 
+            numberRecallScoresPromise, 
+            objectSequencingScoresPromise, 
+            stroopTestScoresPromise
+          ]);
         
         // Process and combine the scores
         const allScores: GameScore[] = [];
