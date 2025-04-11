@@ -1,6 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/customClient";
 
 // Types for game scores
 type BaseGameScore = {
@@ -19,7 +18,7 @@ type NumberRecallGameScore = BaseGameScore & {
   gameType: 'number-recall';
   identifiedCount: number;
   totalCount: number;
-  comments?: string;
+  userComments?: string;
 };
 
 type ObjectSequencingGameScore = BaseGameScore & {
@@ -40,20 +39,26 @@ export type GameScore =
   | ObjectSequencingGameScore 
   | StroopTestGameScore;
 
+// Convert client-side GameScore to database format
+const convertGameScoreToDbFormat = (gameScore: GameScore) => {
+  const { gameType, userId, duration, ...scoreData } = gameScore;
+  
+  return {
+    user_id: userId,
+    game_type: gameType,
+    score: scoreData,
+    comments: 'userComments' in scoreData ? scoreData.userComments : null
+  };
+};
+
 // Save game score to Supabase
 export const saveGameScore = async (gameScore: GameScore) => {
   try {
-    // Extract common fields
-    const { gameType, userId, duration, ...scoreData } = gameScore;
+    const dbGameScore = convertGameScoreToDbFormat(gameScore);
     
     const { data, error } = await supabase
       .from('game_scores')
-      .insert({
-        user_id: userId,
-        game_type: gameType,
-        score: scoreData,
-        comments: 'comments' in scoreData ? scoreData.comments : null
-      });
+      .insert(dbGameScore);
       
     if (error) throw error;
     return data;

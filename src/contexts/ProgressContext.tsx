@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { supabase } from "@/integrations/supabase/client";
-import { saveGameScore, getGameScoresByType, getRecentGameScores } from '../services/gameService';
-import { getAllMusicTracks, getUserMusicTracks, addBuiltInMusicTrack, uploadUserMusicTrack, deleteUserMusicTrack } from '../services/musicService';
+import { supabase } from "@/integrations/supabase/customClient";
+import { saveGameScore, getGameScoresByType, getRecentGameScores, GameScore } from '../services/gameService';
+import { getAllMusicTracks, getUserMusicTracks, uploadUserMusicTrack, deleteUserMusicTrack, MusicTrack } from '../services/musicService';
 
 // Enhanced Game Score Types
 type BaseGameScore = {
@@ -36,9 +36,6 @@ type StroopTestGameScore = BaseGameScore & {
   column: number;
 };
 
-// Union type for all game scores
-type GameScore = MatchingGameScore | NumberRecallGameScore | ObjectSequencingGameScore | StroopTestGameScore;
-
 // Water tracking
 type WaterLog = {
   timestamp: number;
@@ -52,17 +49,6 @@ type MeditationSession = {
   userId: string;
   duration: number; // in seconds
   concentrationImprovement?: number; // percentage (0-100)
-};
-
-// Music tracking
-type MusicTrack = {
-  id: string;
-  title: string;
-  artist?: string;
-  isBuiltIn: boolean;
-  filePath: string;
-  userId?: string; // only for user uploaded tracks
-  uploadTime?: number; // only for user uploaded tracks
 };
 
 type ProgressContextType = {
@@ -360,13 +346,6 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     // Only add if it doesn't exist already
     if (!musicTracks.some(track => track.id === id)) {
       setMusicTracks(prev => [...prev, newTrack]);
-      
-      // Add to Supabase
-      try {
-        await addBuiltInMusicTrack(title, artist, filePath);
-      } catch (error) {
-        console.error('Error adding built-in music track to Supabase:', error);
-      }
     }
   };
 
@@ -377,7 +356,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       isBuiltIn: false,
       filePath,
       userId,
-      uploadTime: Date.now()
+      uploadTime: new Date().toISOString()
     };
     
     setMusicTracks(prev => [...prev, newTrack]);
@@ -545,14 +524,14 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     fetchMusicTracks();
   }, [user]);
 
-  const getAllMusicTracks = () => {
+  const getAllMusicTracksFromState = () => {
     return [
       ...musicTracks.filter(track => track.isBuiltIn),
       ...musicTracks.filter(track => !track.isBuiltIn && track.userId === userId)
     ];
   };
 
-  const getUserMusicTracks = () => {
+  const getUserMusicTracksFromState = () => {
     return musicTracks.filter(track => !track.isBuiltIn && track.userId === userId);
   };
 
@@ -585,8 +564,8 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     musicTracks,
     addBuiltInMusicTrack,
     addUserMusicTrack,
-    getAllMusicTracks,
-    getUserMusicTracks,
+    getAllMusicTracks: getAllMusicTracksFromState,
+    getUserMusicTracks: getUserMusicTracksFromState,
     
     // Progress analysis
     getDailyProgressSummary,

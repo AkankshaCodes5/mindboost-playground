@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/customClient";
 
 export type MusicTrack = {
   id: string;
@@ -11,8 +11,21 @@ export type MusicTrack = {
   uploadTime?: string;
 };
 
+// Convert db track to client format
+const convertDbTrackToClientFormat = (track: any): MusicTrack => {
+  return {
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    isBuiltIn: track.is_built_in,
+    filePath: track.file_path,
+    userId: track.user_id,
+    uploadTime: track.upload_time
+  };
+};
+
 // Get all music tracks (built-in and user uploaded)
-export const getAllMusicTracks = async () => {
+export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   try {
     const { data, error } = await supabase
       .from('music_tracks')
@@ -21,15 +34,7 @@ export const getAllMusicTracks = async () => {
       
     if (error) throw error;
     
-    return data.map(track => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      isBuiltIn: track.is_built_in,
-      filePath: track.file_path,
-      userId: track.user_id,
-      uploadTime: track.upload_time
-    }));
+    return data.map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching music tracks:', error);
     throw error;
@@ -37,7 +42,7 @@ export const getAllMusicTracks = async () => {
 };
 
 // Get user uploaded music tracks
-export const getUserMusicTracks = async (userId: string) => {
+export const getUserMusicTracks = async (userId: string): Promise<MusicTrack[]> => {
   try {
     const { data, error } = await supabase
       .from('music_tracks')
@@ -48,15 +53,7 @@ export const getUserMusicTracks = async (userId: string) => {
       
     if (error) throw error;
     
-    return data.map(track => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      isBuiltIn: track.is_built_in,
-      filePath: track.file_path,
-      userId: track.user_id,
-      uploadTime: track.upload_time
-    }));
+    return data.map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching user music tracks:', error);
     throw error;
@@ -136,7 +133,7 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
     if (fetchError) throw fetchError;
     
     // 2. Delete from storage if it's stored in our bucket
-    if (trackData.file_path.includes('music')) {
+    if (trackData && trackData.file_path && trackData.file_path.includes('music')) {
       const filePath = trackData.file_path.split('/').slice(-2).join('/');
       
       const { error: deleteFileError } = await supabase.storage
