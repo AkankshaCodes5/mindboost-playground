@@ -1,11 +1,17 @@
 
 import { supabase as originalSupabase } from "./client";
+import { Database } from "./types";
 
-// Custom wrapper to enable accessing the new tables we've added
-// This is a workaround for TypeScript errors until types.ts gets updated
+// Define the expected structure more explicitly
+type TablesInsert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
+type TablesRow<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
+
+// Custom wrapper to enable accessing the tables with proper types
 const supabase = {
   ...originalSupabase,
-  from: (table: string) => originalSupabase.from(table as any),
+  from: <T extends keyof Database["public"]["Tables"]>(table: T) => {
+    return originalSupabase.from(table);
+  },
   storage: originalSupabase.storage
 };
 

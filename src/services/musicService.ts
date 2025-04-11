@@ -11,8 +11,20 @@ export type MusicTrack = {
   uploadTime?: string;
 };
 
+// Safe type assertion for database results
+const assertDbResult = <T>(data: any): T => {
+  if (data === null) {
+    return [] as unknown as T;
+  }
+  return data as T;
+};
+
 // Convert db track to client format
 const convertDbTrackToClientFormat = (track: any): MusicTrack => {
+  if (!track || typeof track !== 'object') {
+    throw new Error('Invalid track data');
+  }
+  
   return {
     id: track.id,
     title: track.title,
@@ -33,7 +45,7 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
       
     if (error) throw error;
     
-    return (data || []).map(convertDbTrackToClientFormat);
+    return assertDbResult<any[]>(data || []).map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching music tracks:', error);
     return [];
@@ -51,7 +63,7 @@ export const getUserMusicTracks = async (userId: string): Promise<MusicTrack[]> 
       
     if (error) throw error;
     
-    return (data || []).map(convertDbTrackToClientFormat);
+    return assertDbResult<any[]>(data || []).map(convertDbTrackToClientFormat);
   } catch (error) {
     console.error('Error fetching user music tracks:', error);
     return [];
@@ -96,6 +108,7 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
       .from('music')
       .getPublicUrl(fileName);
       
+    // Use optional chaining to safely access the URL
     const filePath = publicUrlData?.publicUrl || '';
     
     // 3. Create record in music_tracks table
@@ -123,22 +136,28 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
     // 1. Get track info
     const { data: trackData, error: fetchError } = await supabase
       .from('music_tracks')
-      .select('file_path')
+      .select('*') // Using * instead of just file_path
       .eq('id', trackId)
       .eq('user_id', userId)
       .single();
       
-    if (fetchError || !trackData) {
-      throw fetchError || new Error('Track not found');
+    if (fetchError) {
+      throw fetchError;
     }
     
+    if (!trackData) {
+      throw new Error('Track not found');
+    }
+    
+    const filePath = trackData.file_path;
+    
     // 2. Delete from storage if it's stored in our bucket
-    if (trackData.file_path && trackData.file_path.includes('music')) {
-      const filePath = trackData.file_path.split('/').slice(-2).join('/');
+    if (filePath && typeof filePath === 'string' && filePath.includes('music')) {
+      const storageFilePath = filePath.split('/').slice(-2).join('/');
       
       const { error: deleteFileError } = await supabase.storage
         .from('music')
-        .remove([filePath]);
+        .remove([storageFilePath]);
         
       if (deleteFileError) console.error('Could not delete file from storage', deleteFileError);
     }

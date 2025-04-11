@@ -113,19 +113,27 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
 
   // Update localStorage when state changes
   useEffect(() => {
-    localStorage.setItem('mindboost_game_scores', JSON.stringify(gameScores));
+    if (Array.isArray(gameScores)) {
+      localStorage.setItem('mindboost_game_scores', JSON.stringify(gameScores));
+    }
   }, [gameScores]);
   
   useEffect(() => {
-    localStorage.setItem('mindboost_water_logs', JSON.stringify(waterLogs));
+    if (Array.isArray(waterLogs)) {
+      localStorage.setItem('mindboost_water_logs', JSON.stringify(waterLogs));
+    }
   }, [waterLogs]);
   
   useEffect(() => {
-    localStorage.setItem('mindboost_meditation_sessions', JSON.stringify(meditationSessions));
+    if (Array.isArray(meditationSessions)) {
+      localStorage.setItem('mindboost_meditation_sessions', JSON.stringify(meditationSessions));
+    }
   }, [meditationSessions]);
   
   useEffect(() => {
-    localStorage.setItem('mindboost_music_tracks', JSON.stringify(musicTracks));
+    if (Array.isArray(musicTracks)) {
+      localStorage.setItem('mindboost_music_tracks', JSON.stringify(musicTracks));
+    }
   }, [musicTracks]);
   
   useEffect(() => {
@@ -405,53 +413,65 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
         const allScores: GameScore[] = [];
         
         // Process matching scores
-        matchingScores.forEach(dbScore => {
-          const score = dbScore.score || {};
-          allScores.push({
-            gameType: 'matching' as const,
-            userId: dbScore.user_id,
-            duration: score.duration || 0,
-            score: score.score || 0,
-            attempts: score.attempts || 0
+        if (Array.isArray(matchingScores)) {
+          matchingScores.forEach((dbScore: any) => {
+            if (dbScore && typeof dbScore === 'object' && dbScore.score) {
+              allScores.push({
+                gameType: 'matching' as const,
+                userId: dbScore.user_id || '',
+                duration: dbScore.score.duration || 0,
+                score: dbScore.score.score || 0,
+                attempts: dbScore.score.attempts || 0
+              });
+            }
           });
-        });
+        }
         
         // Process number recall scores
-        numberRecallScores.forEach(dbScore => {
-          const score = dbScore.score || {};
-          allScores.push({
-            gameType: 'number-recall' as const,
-            userId: dbScore.user_id,
-            duration: score.duration || 0,
-            identifiedCount: score.identifiedCount || 0,
-            totalCount: score.totalCount || 0,
-            userComments: dbScore.comments || undefined
+        if (Array.isArray(numberRecallScores)) {
+          numberRecallScores.forEach((dbScore: any) => {
+            if (dbScore && typeof dbScore === 'object' && dbScore.score) {
+              allScores.push({
+                gameType: 'number-recall' as const,
+                userId: dbScore.user_id || '',
+                duration: dbScore.score.duration || 0,
+                identifiedCount: dbScore.score.identifiedCount || 0,
+                totalCount: dbScore.score.totalCount || 0,
+                userComments: dbScore.comments || undefined
+              });
+            }
           });
-        });
+        }
         
         // Process object sequencing scores
-        objectSequencingScores.forEach(dbScore => {
-          const score = dbScore.score || {};
-          allScores.push({
-            gameType: 'object-sequencing' as const,
-            userId: dbScore.user_id,
-            duration: score.duration || 0,
-            isCorrect: score.isCorrect || false,
-            attempts: score.attempts || 0
+        if (Array.isArray(objectSequencingScores)) {
+          objectSequencingScores.forEach((dbScore: any) => {
+            if (dbScore && typeof dbScore === 'object' && dbScore.score) {
+              allScores.push({
+                gameType: 'object-sequencing' as const,
+                userId: dbScore.user_id || '',
+                duration: dbScore.score.duration || 0,
+                isCorrect: dbScore.score.isCorrect || false,
+                attempts: dbScore.score.attempts || 0
+              });
+            }
           });
-        });
+        }
         
         // Process stroop test scores
-        stroopTestScores.forEach(dbScore => {
-          const score = dbScore.score || {};
-          allScores.push({
-            gameType: 'stroop-test' as const,
-            userId: dbScore.user_id,
-            duration: score.duration || 0,
-            row: score.row || 0,
-            column: score.column || 0
+        if (Array.isArray(stroopTestScores)) {
+          stroopTestScores.forEach((dbScore: any) => {
+            if (dbScore && typeof dbScore === 'object' && dbScore.score) {
+              allScores.push({
+                gameType: 'stroop-test' as const,
+                userId: dbScore.user_id || '',
+                duration: dbScore.score.duration || 0,
+                row: dbScore.score.row || 0,
+                column: dbScore.score.column || 0
+              });
+            }
           });
-        });
+        }
         
         setGameScores(allScores);
       } catch (error) {

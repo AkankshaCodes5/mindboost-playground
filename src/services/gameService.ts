@@ -51,6 +51,14 @@ const convertGameScoreToDbFormat = (gameScore: GameScore) => {
   };
 };
 
+// Safe type assertion for database results
+const assertDbResult = <T>(data: any): T => {
+  if (data === null || typeof data !== 'object') {
+    throw new Error('Invalid database result');
+  }
+  return data as T;
+};
+
 // Save game score to Supabase
 export const saveGameScore = async (gameScore: GameScore) => {
   try {
@@ -78,7 +86,7 @@ export const getGameScoresByType = async (gameType: string, userId: string) => {
       .eq('user_id', userId);
       
     if (error) throw error;
-    return data || [];
+    return assertDbResult<any[]>(data || []);
   } catch (error) {
     console.error('Error fetching game scores:', error);
     throw error;
@@ -97,7 +105,7 @@ export const getRecentGameScores = async (gameType: string, userId: string, limi
       .limit(limit);
       
     if (error) throw error;
-    return data || [];
+    return assertDbResult<any[]>(data || []);
   } catch (error) {
     console.error('Error fetching recent game scores:', error);
     throw error;
