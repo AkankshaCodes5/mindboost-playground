@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -27,13 +28,17 @@ const NumberRecall = () => {
   const navigate = useNavigate();
 
   const startGame = () => {
-    const newGrid = Array(25)
-      .fill(0)
-      .map((_, index) => ({
-        value: index + 1,
+    // Initialize the grid with cells containing numbers 1-25
+    const newGrid = [];
+    for (let i = 1; i <= 25; i++) {
+      newGrid.push({
+        value: i,
         found: false
-      }))
-      .sort(() => Math.random() - 0.5);
+      });
+    }
+    
+    // Shuffle the grid
+    newGrid.sort(() => Math.random() - 0.5);
     
     setGrid(newGrid);
     setTimeLeft(20);
