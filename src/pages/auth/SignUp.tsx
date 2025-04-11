@@ -37,9 +37,11 @@ const SignUp = () => {
     try {
       setIsSubmitting(true);
       await signUp(name, email, password);
+      // After successful signup, redirect to dashboard
       navigate('/dashboard');
     } catch (error) {
       console.error('Sign up error:', error);
+      // Don't navigate if there's an error
     } finally {
       setIsSubmitting(false);
     }

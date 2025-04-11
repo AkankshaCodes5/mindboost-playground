@@ -1,5 +1,6 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 type User = {
   id: string;
@@ -50,6 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
+      // Check if user with this email already exists
+      const storedUser = localStorage.getItem('mindboost_user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.email === email) {
+          throw new Error('An account with this email already exists.');
+        }
+      }
+      
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -68,10 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Welcome to MindBoost!",
         description: "Your account has been created successfully.",
       });
+
+      return Promise.resolve();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create account. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create account. Please try again.",
         variant: "destructive",
       });
       throw error;
@@ -104,9 +116,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       
       toast({
-        title: "Welcome to MindBoost!",
+        title: "Welcome back to MindBoost!",
         description: "You have successfully logged in.",
       });
+
+      return Promise.resolve();
     } catch (error) {
       toast({
         title: "Error",
@@ -141,6 +155,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
+      // Check if user exists with this email
+      const storedUser = localStorage.getItem('mindboost_user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.email !== email) {
+          throw new Error('No account found with this email address.');
+        }
+      } else {
+        throw new Error('No account found with this email address.');
+      }
+      
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -151,7 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send reset link. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send reset link. Please try again.",
         variant: "destructive",
       });
       throw error;

@@ -21,9 +21,11 @@ const SignIn = () => {
     try {
       setIsSubmitting(true);
       await signIn(email, password);
+      // After successful login, redirect to dashboard
       navigate('/dashboard');
     } catch (error) {
       console.error('Sign in error:', error);
+      // Don't navigate if there's an error
     } finally {
       setIsSubmitting(false);
     }
