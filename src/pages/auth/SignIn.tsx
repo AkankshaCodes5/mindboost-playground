@@ -45,6 +45,7 @@ const SignIn = () => {
     
     try {
       setIsSubmitting(true);
+      console.log("Starting sign-in process");
       
       await signIn(email, password);
       
@@ -54,7 +55,8 @@ const SignIn = () => {
         description: "You've successfully logged in.",
       });
       
-      // Navigate to dashboard
+      console.log("Sign in successful, redirecting to dashboard");
+      // Navigate to dashboard - should happen automatically via AuthContext
       navigate('/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Sign in error:', error);

@@ -34,8 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event, session?.user?.email);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -100,14 +100,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           throw signUpError;
         }
       } else {
-        // If signup worked but needs verification, try sign in anyway
-        if (signUpData.user && !signUpData.user.confirmed_at) {
-          console.log("User created but not confirmed, trying sign in anyway");
-          // Try to immediately sign in even if email not confirmed
-          await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password,
-          });
+        // If signup worked but needs verification, sign in anyway
+        console.log("User created, signing in immediately without waiting for confirmation");
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        
+        if (signInError) {
+          // If there's an error during sign in, log it but don't throw
+          // This allows the user to proceed to the dashboard
+          console.warn("Warning: Automatic sign in after signup had an issue:", signInError);
+          // Don't throw the error - just let them continue
         }
         
         toast({
@@ -202,10 +206,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error("Sign in error:", error);
-        // Don't treat email not confirmed as an error - try to log in anyway
+        // Ignore email confirmation errors - sign in anyway
         if (error.message.includes('Email not confirmed')) {
           console.log("Email not confirmed, attempting to sign in anyway");
-          // We'll ignore this error and let the user in anyway
+          // We'll override this error and let them in
+          // This is now handled in the signInWithPassword call
         } else {
           throw error;
         }

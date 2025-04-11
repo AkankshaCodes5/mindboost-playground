@@ -69,8 +69,9 @@ const SignUp = () => {
     
     try {
       setIsSubmitting(true);
+      console.log("Starting user creation process");
       
-      // Use the direct user creation method
+      // Use the direct user creation method that handles sign-in afterward
       await createUserDirectly(email, password, name);
       
       // Show welcome message
@@ -79,7 +80,8 @@ const SignUp = () => {
         description: "Your account has been created successfully.",
       });
       
-      // Navigate to dashboard directly
+      console.log("User created successfully, redirecting to dashboard");
+      // Navigate to dashboard directly - should happen automatically via AuthContext
       navigate('/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Sign up error:', error);
