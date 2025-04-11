@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion } from 'framer-motion';
 import { Timer, Check, X, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface GridCell {
   value: number;
@@ -21,11 +22,13 @@ const NumberRecall = () => {
   const [startTime, setStartTime] = useState<number>(0);
   const [endTime, setEndTime] = useState<number>(0);
   const [ascending, setAscending] = useState<boolean>(true);
+  const [userComments, setUserComments] = useState<string>('');
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { addNumberRecallScore } = useProgress();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const startGame = () => {
     // Initialize the grid with cells containing numbers 1-25
@@ -47,6 +50,7 @@ const NumberRecall = () => {
     setAscending(Math.random() > 0.5);
     setGameState('memorizing');
     setStartTime(Date.now());
+    setUserComments('');
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -86,7 +90,7 @@ const NumberRecall = () => {
     const maxPossible = 25;
     const duration = (Date.now() - startTime) / 1000;
     
-    addNumberRecallScore(answer, maxPossible, duration);
+    addNumberRecallScore(answer, maxPossible, duration, userComments);
     
     setCorrectNumbers(answer);
     
@@ -151,11 +155,24 @@ const NumberRecall = () => {
               type="number"
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
-              className="mindboost-input text-center text-xl font-bold"
+              className="mindboost-input text-center text-xl font-bold mb-4 w-full"
               placeholder="Enter number"
               min="0"
               max="25"
             />
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comments (optional)
+              </label>
+              <textarea
+                value={userComments}
+                onChange={(e) => setUserComments(e.target.value)}
+                className="w-full p-2 border rounded-md"
+                placeholder="Add any comments about your experience..."
+                rows={3}
+              />
+            </div>
           </div>
         )}
         
@@ -168,6 +185,12 @@ const NumberRecall = () => {
             <h2 className="text-xl font-bold mb-2">Results</h2>
             <p>You recalled {correctNumbers} out of 25 numbers correctly.</p>
             <p>Time: {((endTime - startTime) / 1000).toFixed(1)}s</p>
+            {userComments && (
+              <div className="mt-2 p-2 bg-white bg-opacity-10 rounded-md">
+                <p className="text-sm font-medium">Your comments:</p>
+                <p className="text-sm">{userComments}</p>
+              </div>
+            )}
             <div className="mt-4 flex space-x-3">
               <button
                 onClick={startGame}

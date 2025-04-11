@@ -39,6 +39,33 @@ export type Database = {
         }
         Relationships: []
       }
+      game_scores: {
+        Row: {
+          comments: string | null
+          created_at: string | null
+          game_type: string
+          id: string
+          score: Json
+          user_id: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string | null
+          game_type: string
+          id?: string
+          score: Json
+          user_id: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string | null
+          game_type?: string
+          id?: string
+          score?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       meditation_sessions: {
         Row: {
           created_at: string | null
@@ -63,6 +90,36 @@ export type Database = {
           meditation_type?: string | null
           notes?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      music_tracks: {
+        Row: {
+          artist: string | null
+          file_path: string
+          id: string
+          is_built_in: boolean
+          title: string
+          upload_time: string | null
+          user_id: string | null
+        }
+        Insert: {
+          artist?: string | null
+          file_path: string
+          id?: string
+          is_built_in?: boolean
+          title: string
+          upload_time?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          artist?: string | null
+          file_path?: string
+          id?: string
+          is_built_in?: boolean
+          title?: string
+          upload_time?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

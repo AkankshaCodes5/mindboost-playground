@@ -1,6 +1,8 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { supabase } from "@/integrations/supabase/client";
+import { saveGameScore, getGameScoresByType, getRecentGameScores } from '../services/gameService';
+import { getAllMusicTracks, getUserMusicTracks, addBuiltInMusicTrack, uploadUserMusicTrack, deleteUserMusicTrack } from '../services/musicService';
 
 // Enhanced Game Score Types
 type BaseGameScore = {
@@ -71,7 +73,7 @@ type ProgressContextType = {
   addObjectSequencingScore: (isCorrect: boolean, attempts: number, duration: number) => void;
   addStroopTestScore: (row: number, column: number, duration: number) => void;
   getGameScoresByType: (gameType: string) => GameScore[];
-  getRecentGameScores: (gameType: string, limit?: number) => GameScore[];
+  getRecentGameScores: (gameType: string) => GameScore[];
   
   // Water tracking
   waterLogs: WaterLog[];
@@ -175,8 +177,8 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('mindboost_water_goal', JSON.stringify(dailyWaterGoal));
   }, [dailyWaterGoal]);
 
-  // Game score methods
-  const addMatchingGameScore = (score: number, attempts: number, duration: number) => {
+  // Game score methods with Supabase integration
+  const addMatchingGameScore = async (score: number, attempts: number, duration: number) => {
     const newScore: MatchingGameScore = {
       gameType: 'matching',
       timestamp: Date.now(),
@@ -185,10 +187,20 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       attempts,
       duration
     };
+    
     setGameScores(prev => [...prev, newScore]);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await saveGameScore(newScore);
+      } catch (error) {
+        console.error('Error saving matching game score to Supabase:', error);
+      }
+    }
   };
 
-  const addNumberRecallScore = (identifiedCount: number, totalCount: number, duration: number, userComments?: string) => {
+  const addNumberRecallScore = async (identifiedCount: number, totalCount: number, duration: number, userComments?: string) => {
     const newScore: NumberRecallGameScore = {
       gameType: 'number-recall',
       timestamp: Date.now(),
@@ -198,10 +210,20 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       duration,
       userComments
     };
+    
     setGameScores(prev => [...prev, newScore]);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await saveGameScore(newScore);
+      } catch (error) {
+        console.error('Error saving number recall score to Supabase:', error);
+      }
+    }
   };
 
-  const addObjectSequencingScore = (isCorrect: boolean, attempts: number, duration: number) => {
+  const addObjectSequencingScore = async (isCorrect: boolean, attempts: number, duration: number) => {
     const newScore: ObjectSequencingGameScore = {
       gameType: 'object-sequencing',
       timestamp: Date.now(),
@@ -210,10 +232,20 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       attempts,
       duration
     };
+    
     setGameScores(prev => [...prev, newScore]);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await saveGameScore(newScore);
+      } catch (error) {
+        console.error('Error saving object sequencing score to Supabase:', error);
+      }
+    }
   };
 
-  const addStroopTestScore = (row: number, column: number, duration: number) => {
+  const addStroopTestScore = async (row: number, column: number, duration: number) => {
     const newScore: StroopTestGameScore = {
       gameType: 'stroop-test',
       timestamp: Date.now(),
@@ -222,7 +254,17 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
       column,
       duration
     };
+    
     setGameScores(prev => [...prev, newScore]);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await saveGameScore(newScore);
+      } catch (error) {
+        console.error('Error saving stroop test score to Supabase:', error);
+      }
+    }
   };
 
   const getGameScoresByType = (gameType: string) => {
@@ -306,7 +348,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Music tracking methods
-  const addBuiltInMusicTrack = (id: string, title: string, artist: string, filePath: string) => {
+  const addBuiltInMusicTrack = async (id: string, title: string, artist: string, filePath: string) => {
     const newTrack: MusicTrack = {
       id,
       title,
@@ -318,10 +360,17 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     // Only add if it doesn't exist already
     if (!musicTracks.some(track => track.id === id)) {
       setMusicTracks(prev => [...prev, newTrack]);
+      
+      // Add to Supabase
+      try {
+        await addBuiltInMusicTrack(title, artist, filePath);
+      } catch (error) {
+        console.error('Error adding built-in music track to Supabase:', error);
+      }
     }
   };
 
-  const addUserMusicTrack = (title: string, filePath: string) => {
+  const addUserMusicTrack = async (title: string, filePath: string, file?: File) => {
     const newTrack: MusicTrack = {
       id: `user-${Date.now()}`,
       title,
@@ -332,17 +381,15 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setMusicTracks(prev => [...prev, newTrack]);
-  };
-
-  const getAllMusicTracks = () => {
-    return [
-      ...musicTracks.filter(track => track.isBuiltIn),
-      ...musicTracks.filter(track => !track.isBuiltIn && track.userId === userId)
-    ];
-  };
-
-  const getUserMusicTracks = () => {
-    return musicTracks.filter(track => !track.isBuiltIn && track.userId === userId);
+    
+    // Upload to Supabase if user is authenticated and file provided
+    if (user && file) {
+      try {
+        await uploadUserMusicTrack(userId, title, file);
+      } catch (error) {
+        console.error('Error uploading user music track to Supabase:', error);
+      }
+    }
   };
 
   // Progress analysis methods
@@ -411,6 +458,102 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     }
     
     return result;
+  };
+
+  // Fetch game scores from Supabase when user changes
+  useEffect(() => {
+    const fetchGameScores = async () => {
+      if (!user) return;
+      
+      try {
+        // Fetch all game types
+        const matchingScores = await getGameScoresByType('matching', userId);
+        const numberRecallScores = await getGameScoresByType('number-recall', userId);
+        const objectSequencingScores = await getGameScoresByType('object-sequencing', userId);
+        const stroopTestScores = await getGameScoresByType('stroop-test', userId);
+        
+        // Process and combine the scores
+        const allScores = [
+          ...matchingScores,
+          ...numberRecallScores,
+          ...objectSequencingScores,
+          ...stroopTestScores
+        ].map(dbScore => {
+          const gameType = dbScore.game_type;
+          const score = dbScore.score;
+          const base = {
+            timestamp: new Date(dbScore.created_at).getTime(),
+            userId: dbScore.user_id,
+            duration: score.duration || 0
+          };
+          
+          switch (gameType) {
+            case 'matching':
+              return {
+                ...base, 
+                gameType: 'matching' as const,
+                score: score.score,
+                attempts: score.attempts
+              };
+            case 'number-recall':
+              return {
+                ...base, 
+                gameType: 'number-recall' as const,
+                identifiedCount: score.identifiedCount,
+                totalCount: score.totalCount,
+                userComments: dbScore.comments
+              };
+            case 'object-sequencing':
+              return {
+                ...base, 
+                gameType: 'object-sequencing' as const,
+                isCorrect: score.isCorrect,
+                attempts: score.attempts
+              };
+            case 'stroop-test':
+              return {
+                ...base, 
+                gameType: 'stroop-test' as const,
+                row: score.row,
+                column: score.column
+              };
+            default:
+              return null;
+          }
+        }).filter(Boolean) as GameScore[];
+        
+        setGameScores(allScores);
+      } catch (error) {
+        console.error('Error fetching game scores from Supabase:', error);
+      }
+    };
+    
+    fetchGameScores();
+  }, [user, userId]);
+
+  // Fetch music tracks from Supabase when user changes
+  useEffect(() => {
+    const fetchMusicTracks = async () => {
+      try {
+        const tracks = await getAllMusicTracks();
+        setMusicTracks(tracks);
+      } catch (error) {
+        console.error('Error fetching music tracks from Supabase:', error);
+      }
+    };
+    
+    fetchMusicTracks();
+  }, [user]);
+
+  const getAllMusicTracks = () => {
+    return [
+      ...musicTracks.filter(track => track.isBuiltIn),
+      ...musicTracks.filter(track => !track.isBuiltIn && track.userId === userId)
+    ];
+  };
+
+  const getUserMusicTracks = () => {
+    return musicTracks.filter(track => !track.isBuiltIn && track.userId === userId);
   };
 
   const value = {
