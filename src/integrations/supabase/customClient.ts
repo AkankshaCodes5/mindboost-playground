@@ -12,4 +12,34 @@ const supabase = {
   storage: originalSupabase.storage
 };
 
+// Function to check if storage bucket exists and create if needed
+export const ensureMusicStorageBucket = async () => {
+  try {
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error("Error checking storage buckets:", error);
+      return;
+    }
+    
+    const musicBucketExists = buckets.some(bucket => bucket.name === 'music');
+    
+    if (!musicBucketExists) {
+      console.log("Creating music storage bucket");
+      const { error: createError } = await supabase.storage.createBucket('music', {
+        public: true
+      });
+      
+      if (createError) {
+        console.error("Error creating music bucket:", createError);
+      }
+    }
+  } catch (e) {
+    console.error("Error in ensureMusicStorageBucket:", e);
+  }
+};
+
+// Initialize storage - call this when app starts
+ensureMusicStorageBucket();
+
 export { supabase };

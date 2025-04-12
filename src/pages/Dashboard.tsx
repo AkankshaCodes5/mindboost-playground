@@ -14,8 +14,20 @@ const Dashboard = () => {
   const { 
     getTotalWaterToday, 
     getWaterPercentage, 
-    getMeditationMinutesToday 
+    getMeditationMinutesToday,
+    getGameScoresByType
   } = useProgress();
+
+  // Get game scores count for today
+  const getGameScoresCount = () => {
+    // Count all game scores from different types
+    const matchingGames = getGameScoresByType('matching').length;
+    const numberRecallGames = getGameScoresByType('number-recall').length;
+    const objectSequencingGames = getGameScoresByType('object-sequencing').length;
+    const stroopTestGames = getGameScoresByType('stroop-test').length;
+    
+    return matchingGames + numberRecallGames + objectSequencingGames + stroopTestGames;
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -57,7 +69,7 @@ const Dashboard = () => {
               <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
                 <Brain className="w-6 h-6 text-mindboost-primary mb-2" />
                 <span className="text-xs text-gray-500">Memory Games</span>
-                <span className="font-semibold text-mindboost-dark">{0}</span>
+                <span className="font-semibold text-mindboost-dark">{getGameScoresCount()}</span>
               </div>
               <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
                 <Timer className="w-6 h-6 text-mindboost-primary mb-2" />

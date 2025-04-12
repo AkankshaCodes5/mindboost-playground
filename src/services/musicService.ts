@@ -39,14 +39,60 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
     if (error) throw error;
     
     if (!isValidData(data)) {
-      return [];
+      console.log('No valid music track data returned');
+      return getDefaultTracks();
     }
     
-    return data.map(convertDbTrackToClientFormat);
+    const tracks = data.map(convertDbTrackToClientFormat);
+    console.log('Fetched tracks from DB:', tracks);
+    
+    if (tracks.length === 0) {
+      console.log('No tracks found in DB, using defaults');
+      return getDefaultTracks();
+    }
+    
+    return tracks;
   } catch (error) {
     console.error('Error fetching music tracks:', error);
-    return [];
+    return getDefaultTracks();
   }
+};
+
+// Return default tracks if database fails
+export const getDefaultTracks = (): MusicTrack[] => {
+  const defaultTracks: MusicTrack[] = [
+    {
+      id: 'default-1',
+      title: 'Calm Waters',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
+    },
+    {
+      id: 'default-2',
+      title: 'Forest Meditation',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
+    },
+    {
+      id: 'default-3',
+      title: 'Deep Focus',
+      artist: 'Binaural Beats',
+      isBuiltIn: true,
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-just-chill-16.mp3',
+    },
+    {
+      id: 'default-4',
+      title: 'Dream State',
+      artist: 'Binaural Beats',
+      isBuiltIn: true,
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3',
+    }
+  ];
+  
+  console.log('Using default tracks:', defaultTracks);
+  return defaultTracks;
 };
 
 // Get user uploaded music tracks

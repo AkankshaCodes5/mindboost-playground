@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -93,15 +94,23 @@ const MatchingGame = () => {
       setEndTime(endTimeValue);
       setGameComplete(true);
       
-      const duration = (endTimeValue - startTime) / 1000;
+      const duration = Math.round((endTimeValue - startTime) / 1000);
       const score = Math.max(100 - (attempts - 6) * 10, 10);
       
-      addMatchingGameScore(score, attempts, duration);
-      
-      toast({
-        title: "Game Complete!",
-        description: `You found all matches in ${attempts} attempts.`,
+      console.log('Game completed! Saving score:', {
+        score, attempts, duration
       });
+      
+      try {
+        addMatchingGameScore(score, attempts, duration);
+        
+        toast({
+          title: "Game Complete!",
+          description: `You found all matches in ${attempts} attempts.`,
+        });
+      } catch (error) {
+        console.error("Error saving game score:", error);
+      }
     }
   }, [matchedPairs, attempts, gameStarted, startTime, addMatchingGameScore, toast]);
 
