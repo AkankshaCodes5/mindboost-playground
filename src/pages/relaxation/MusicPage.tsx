@@ -3,9 +3,16 @@ import { useState, useRef, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useToast } from "@/components/ui/use-toast";
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipForward, SkipBack, Volume2, Upload, X } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Volume2, Upload, X, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllMusicTracks, uploadUserMusicTrack, deleteUserMusicTrack } from '../../services/musicService';
+import { 
+  getAllMusicTracks, 
+  uploadUserMusicTrack, 
+  deleteUserMusicTrack, 
+  getDefaultTracks,
+  isValidAudioUrl
+} from '../../services/musicService';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface Track {
   id: string;
@@ -28,15 +35,35 @@ const MusicPage = () => {
   const [uploadTitle, setUploadTitle] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingTracks, setLoadingTracks] = useState(true);
+  const [currentTrackDuration, setCurrentTrackDuration] = useState<string>('0:00');
+  const [currentTrackTime, setCurrentTrackTime] = useState<string>('0:00');
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Initialize audio element with proper configuration
+  useEffect(() => {
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.crossOrigin = "anonymous";
+    audio.volume = volume;
+    audioRef.current = audio;
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, []);
+
   // Fetch tracks from Supabase with fallback to default tracks
   useEffect(() => {
     const fetchTracks = async () => {
+      setLoadingTracks(true);
       try {
         const musicTracks = await getAllMusicTracks();
         
@@ -56,6 +83,13 @@ const MusicPage = () => {
           
           setTracks(formattedTracks);
           console.log("Fetched tracks:", formattedTracks);
+          
+          // Validate track URLs
+          formattedTracks.forEach(track => {
+            if (!isValidAudioUrl(track.source)) {
+              console.warn(`Invalid audio URL for track: ${track.title}`, track.source);
+            }
+          });
         } else {
           // Add default tracks if no tracks were found
           setDefaultTracks();
@@ -70,6 +104,8 @@ const MusicPage = () => {
         
         // Fallback to default tracks
         setDefaultTracks();
+      } finally {
+        setLoadingTracks(false);
       }
     };
     
@@ -78,40 +114,26 @@ const MusicPage = () => {
 
   // Function to set default tracks
   const setDefaultTracks = () => {
-    setTracks([
-      {
-        id: '1',
-        title: 'Calm Waters',
-        category: 'Nature Sounds',
-        duration: '5:32',
-        source: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1baf.mp3?filename=calm-river-ambience-loop-125071.mp3',
-        isBuiltIn: true
-      },
-      {
-        id: '2',
-        title: 'Forest Meditation',
-        category: 'Nature Sounds',
-        duration: '4:15',
-        source: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_82429925a9.mp3?filename=forest-with-small-river-birds-and-nature-field-recording-6735.mp3',
-        isBuiltIn: true
-      },
-      {
-        id: '3',
-        title: 'Deep Focus',
-        category: 'Binaural Beats',
-        duration: '6:45',
-        source: 'https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31ab7a71.mp3?filename=ambient-piano-ampamp-strings-10711.mp3',
-        isBuiltIn: true
-      },
-      {
-        id: '4',
-        title: 'Dream State',
-        category: 'Binaural Beats',
-        duration: '8:20',
-        source: 'https://cdn.pixabay.com/download/audio/2021/04/08/audio_7ef676c9c8.mp3?filename=relaxing-mountains-rivers-amp-birds-singing-5816.mp3',
-        isBuiltIn: true
-      }
-    ]);
+    const defaultTracksData = getDefaultTracks();
+    const formattedDefaultTracks: Track[] = defaultTracksData.map(track => ({
+      id: track.id,
+      title: track.title || 'Untitled Track',
+      artist: track.artist,
+      category: 'Nature Sounds',
+      source: track.filePath,
+      isBuiltIn: true,
+      duration: '5:30'
+    }));
+    
+    setTracks(formattedDefaultTracks);
+    console.log("Using default tracks:", formattedDefaultTracks);
+  };
+
+  // Format time in MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' + secs : secs}`;
   };
 
   useEffect(() => {
@@ -119,32 +141,52 @@ const MusicPage = () => {
     if (!audio) return;
 
     const updateProgress = () => {
-      const duration = audio.duration;
-      const currentTime = audio.currentTime;
+      const duration = audio.duration || 0;
+      const currentTime = audio.currentTime || 0;
       if (duration > 0) {
         setProgress((currentTime / duration) * 100);
+        setCurrentTrackTime(formatTime(currentTime));
+        setCurrentTrackDuration(formatTime(duration));
       }
     };
 
     const handleAudioError = (e: Event) => {
       console.error('Audio error:', e);
-      setError('Could not play this track. Try another one.');
+      const errorMessage = "Could not play this track. The file might be unavailable or in an unsupported format.";
+      setError(errorMessage);
       setIsPlaying(false);
       toast({
         title: "Playback Error",
-        description: "Could not play the selected track. The file might be corrupted or unavailable.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Try the next track if this one fails
+      if (currentTrackIndex >= 0) {
+        nextTrack();
+      }
+    };
+    
+    const handleAudioEnded = () => {
+      handleTrackEnd();
+    };
+    
+    const handleLoadedMetadata = () => {
+      if (audio.duration) {
+        setCurrentTrackDuration(formatTime(audio.duration));
+      }
     };
 
     audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', handleTrackEnd);
+    audio.addEventListener('ended', handleAudioEnded);
     audio.addEventListener('error', handleAudioError);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
-      audio.removeEventListener('ended', handleTrackEnd);
+      audio.removeEventListener('ended', handleAudioEnded);
       audio.removeEventListener('error', handleAudioError);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
   }, [currentTrackIndex, toast]);
 
@@ -183,6 +225,9 @@ const MusicPage = () => {
           description: `Could not play "${track.title}". The audio might be unavailable.`,
           variant: "destructive",
         });
+        
+        // Try the next track if this one fails
+        setTimeout(() => nextTrack(), 1000);
       });
     }
   };
@@ -199,7 +244,7 @@ const MusicPage = () => {
     } else {
       if (audioRef.current) {
         audioRef.current.play().catch(error => {
-          console.error('Error playing audio:', error);
+          console.error('Error resuming audio:', error);
           setError(`Could not resume: ${error.message}`);
           toast({
             title: "Playback Error",
@@ -385,18 +430,23 @@ const MusicPage = () => {
         {/* Current track player */}
         <div className="bg-mindboost-primary text-white rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-semibold">
+            <div className="max-w-[70%]">
+              <h3 className="font-semibold truncate">
                 {currentTrackIndex >= 0 
                   ? tracks[currentTrackIndex].title 
                   : 'Select a track'}
               </h3>
-              <p className="text-sm opacity-80">
+              <p className="text-sm opacity-80 truncate">
                 {currentTrackIndex >= 0 
                   ? tracks[currentTrackIndex].category || tracks[currentTrackIndex].artist || 'Relaxation sounds'
                   : 'Relaxation sounds'}
               </p>
-              {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
+              {error && (
+                <div className="flex items-center text-red-300 mt-1 text-xs">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  <span className="truncate">{error}</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center">
               <Volume2 className="w-5 h-5 mr-2" />
@@ -412,6 +462,12 @@ const MusicPage = () => {
             </div>
           </div>
           
+          {/* Time display */}
+          <div className="flex justify-between text-xs mb-1 px-1">
+            <span>{currentTrackTime}</span>
+            <span>{currentTrackDuration}</span>
+          </div>
+          
           {/* Progress bar */}
           <div 
             className="w-full bg-white bg-opacity-20 h-1.5 rounded-full mb-4 cursor-pointer"
@@ -425,27 +481,28 @@ const MusicPage = () => {
           
           {/* Controls */}
           <div className="flex justify-center items-center space-x-8">
-            <button onClick={prevTrack} aria-label="Previous track">
+            <button 
+              onClick={prevTrack} 
+              aria-label="Previous track"
+              className="hover:text-opacity-80 transition-opacity"
+            >
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
               onClick={togglePlayPause}
-              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center"
+              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center transform hover:scale-105 transition-transform"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
             </button>
-            <button onClick={nextTrack} aria-label="Next track">
+            <button 
+              onClick={nextTrack} 
+              aria-label="Next track"
+              className="hover:text-opacity-80 transition-opacity"
+            >
               <SkipForward className="w-6 h-6" />
             </button>
           </div>
-          
-          <audio 
-            ref={audioRef} 
-            preload="auto" 
-            crossOrigin="anonymous"
-            onError={(e) => console.error("Audio element error:", e)}
-          />
         </div>
         
         {/* Upload form */}
@@ -523,7 +580,11 @@ const MusicPage = () => {
           </div>
           
           <div className="space-y-2">
-            {tracks.length === 0 ? (
+            {loadingTracks ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-mindboost-primary"></div>
+              </div>
+            ) : tracks.length === 0 ? (
               <p className="text-center text-gray-500 py-4">No tracks available. Try uploading one!</p>
             ) : (
               tracks.map((track, index) => (
@@ -550,9 +611,9 @@ const MusicPage = () => {
                         : <Play className="w-4 h-4" />
                       }
                     </div>
-                    <div>
-                      <p className="font-medium">{track.title}</p>
-                      <p className="text-xs text-gray-500">
+                    <div className="overflow-hidden">
+                      <p className="font-medium truncate">{track.title}</p>
+                      <p className="text-xs text-gray-500 truncate">
                         {track.category || track.artist || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
                       </p>
                     </div>
@@ -563,7 +624,10 @@ const MusicPage = () => {
                     {/* Delete button for user uploads */}
                     {!track.isBuiltIn && track.userId === user?.id && (
                       <button
-                        onClick={() => handleDeleteTrack(track.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTrack(track.id);
+                        }}
                         className="text-red-500 p-1"
                         aria-label="Delete track"
                       >
@@ -575,6 +639,41 @@ const MusicPage = () => {
               ))
             )}
           </div>
+        </div>
+        
+        {/* Featured Tracks Carousel */}
+        <div className="mb-6">
+          <h3 className="font-semibold mb-3">Featured Tracks</h3>
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full relative"
+          >
+            <CarouselContent>
+              {tracks.filter(track => track.isBuiltIn).map((track, index) => (
+                <CarouselItem key={track.id} className="basis-3/4 md:basis-1/2 lg:basis-1/3">
+                  <div 
+                    className="bg-mindboost-light p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      const actualIndex = tracks.findIndex(t => t.id === track.id);
+                      if (actualIndex !== -1) playTrack(actualIndex);
+                    }}
+                  >
+                    <div className="bg-mindboost-primary rounded-lg p-6 flex items-center justify-center mb-2">
+                      <Play className="w-10 h-10 text-white" />
+                    </div>
+                    <h4 className="font-medium truncate">{track.title}</h4>
+                    <p className="text-xs text-gray-500">{track.artist || 'Nature Sounds'}</p>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <div className="absolute -right-2 top-1/2 -translate-y-1/2">
+              <CarouselNext className="h-8 w-8 rounded-full" />
+            </div>
+          </Carousel>
         </div>
         
         {/* Tips section */}

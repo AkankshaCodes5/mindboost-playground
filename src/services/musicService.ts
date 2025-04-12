@@ -29,6 +29,85 @@ const convertDbTrackToClientFormat = (track: Record<string, any>): MusicTrack =>
   };
 };
 
+// Default tracks that will be used if database tracks can't be loaded
+export const getDefaultTracks = (): MusicTrack[] => {
+  return [
+    {
+      id: 'default-1',
+      title: 'Calm Waters',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1baf.mp3?filename=calm-river-ambience-loop-125071.mp3',
+    },
+    {
+      id: 'default-2',
+      title: 'Forest Meditation',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_82429925a9.mp3?filename=forest-with-small-river-birds-and-nature-field-recording-6735.mp3',
+    },
+    {
+      id: 'default-3',
+      title: 'Deep Focus',
+      artist: 'Binaural Beats',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31ab7a71.mp3?filename=ambient-piano-ampamp-strings-10711.mp3',
+    },
+    {
+      id: 'default-4',
+      title: 'Dream State',
+      artist: 'Binaural Beats',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2021/04/08/audio_7ef676c9c8.mp3?filename=relaxing-mountains-rivers-amp-birds-singing-5816.mp3',
+    }
+  ];
+};
+
+// Check if a URL is valid
+export const isValidAudioUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Pre-load audio to check if it's playable
+export const checkAudioPlayable = async (url: string): Promise<boolean> => {
+  return new Promise(resolve => {
+    const audio = new Audio();
+    audio.preload = "metadata";
+    
+    const onCanPlay = () => {
+      cleanup();
+      resolve(true);
+    };
+    
+    const onError = () => {
+      cleanup();
+      resolve(false);
+    };
+    
+    const cleanup = () => {
+      audio.removeEventListener('canplaythrough', onCanPlay);
+      audio.removeEventListener('error', onError);
+    };
+    
+    audio.addEventListener('canplaythrough', onCanPlay);
+    audio.addEventListener('error', onError);
+    
+    // Set timeout to prevent waiting too long
+    setTimeout(() => {
+      cleanup();
+      resolve(false);
+    }, 5000);
+    
+    audio.src = url;
+    audio.load();
+  });
+};
+
 // Get all music tracks (built-in and user uploaded)
 export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   try {
@@ -36,16 +115,22 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
       .from('music_tracks')
       .select('*');
       
-    if (error) throw error;
-    
-    if (!isValidData(data)) {
-      return [];
+    if (error) {
+      console.error('Error fetching tracks from database:', error);
+      return getDefaultTracks(); // Return default tracks if database fails
     }
     
-    return data.map(convertDbTrackToClientFormat);
+    if (!isValidData(data) || data.length === 0) {
+      console.log('No tracks found in database or invalid data format, using defaults');
+      return getDefaultTracks();
+    }
+    
+    const tracks = data.map(convertDbTrackToClientFormat);
+    console.log('Fetched tracks successfully:', tracks);
+    return tracks;
   } catch (error) {
-    console.error('Error fetching music tracks:', error);
-    return [];
+    console.error('Exception fetching music tracks:', error);
+    return getDefaultTracks();
   }
 };
 
@@ -81,7 +166,8 @@ export const addBuiltInMusicTrack = async (title: string, artist: string, filePa
         artist,
         is_built_in: true,
         file_path: filePath
-      });
+      })
+      .select();
       
     if (error) throw error;
     return data;
@@ -91,26 +177,44 @@ export const addBuiltInMusicTrack = async (title: string, artist: string, filePa
   }
 };
 
-// Upload user music track with improved type safety
+// Upload user music track with improved error handling
 export const uploadUserMusicTrack = async (userId: string, title: string, file: File) => {
   try {
+    console.log(`Uploading track "${title}" for user ${userId}`);
+    
     // 1. Upload file to storage
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
+    console.log(`Storage path: music/${fileName}`);
+    
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('music')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
       
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw uploadError;
+    }
+    
+    console.log('File uploaded successfully:', uploadData);
     
     // 2. Get public URL safely
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = await supabase.storage
       .from('music')
       .getPublicUrl(fileName);
       
     // Safely access the URL with type checking
     const filePath = publicUrlData?.publicUrl || '';
+    
+    console.log('Public URL:', filePath);
+    
+    if (!filePath) {
+      throw new Error('Failed to get public URL for uploaded file');
+    }
     
     // 3. Create record in music_tracks table
     const { data: trackData, error: trackError } = await supabase
@@ -120,10 +224,15 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
         is_built_in: false,
         file_path: filePath,
         user_id: userId
-      });
+      })
+      .select();
       
-    if (trackError) throw trackError;
+    if (trackError) {
+      console.error('Database insert error:', trackError);
+      throw trackError;
+    }
     
+    console.log('Track record created:', trackData);
     return trackData;
   } catch (error) {
     console.error('Error uploading user music track:', error);
@@ -155,6 +264,7 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
     
     // 2. Delete from storage if it's stored in our bucket
     if (filePath && typeof filePath === 'string' && filePath.includes('music')) {
+      // Extract the storage path from the URL
       const storageFilePath = filePath.split('/').slice(-2).join('/');
       
       const { error: deleteFileError } = await supabase.storage
