@@ -5,7 +5,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipForward, SkipBack, Volume2, Upload, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from "@/integrations/supabase/client";
 import { getAllMusicTracks, uploadUserMusicTrack, deleteUserMusicTrack } from '../../services/musicService';
 
 interface Track {
@@ -28,82 +27,92 @@ const MusicPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch tracks from Supabase
+  // Fetch tracks from Supabase with fallback to default tracks
   useEffect(() => {
     const fetchTracks = async () => {
       try {
         const musicTracks = await getAllMusicTracks();
         
-        // Convert to Track format
-        const formattedTracks: Track[] = musicTracks.map(track => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          category: track.isBuiltIn ? 'Built-in' : 'My Uploads',
-          source: track.filePath,
-          isBuiltIn: track.isBuiltIn,
-          userId: track.userId,
-          // Estimate duration (this would normally come from metadata)
-          duration: '3:45'
-        }));
-        
-        setTracks(formattedTracks);
+        if (musicTracks.length > 0) {
+          // Convert to Track format
+          const formattedTracks: Track[] = musicTracks.map(track => ({
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            category: track.isBuiltIn ? 'Built-in' : 'My Uploads',
+            source: track.filePath,
+            isBuiltIn: track.isBuiltIn,
+            userId: track.userId,
+            // Estimate duration (this would normally come from metadata)
+            duration: '3:45'
+          }));
+          
+          setTracks(formattedTracks);
+          console.log("Fetched tracks:", formattedTracks);
+        } else {
+          // Add default tracks if no tracks were found
+          setDefaultTracks();
+        }
       } catch (error) {
         console.error('Error fetching music tracks:', error);
         toast({
           title: "Error",
-          description: "Could not load music tracks.",
+          description: "Could not load music tracks, using defaults.",
           variant: "destructive",
         });
+        
+        // Fallback to default tracks
+        setDefaultTracks();
       }
     };
     
     fetchTracks();
-    
-    // If no tracks are available, add default ones
-    if (tracks.length === 0) {
-      setTracks([
-        {
-          id: '1',
-          title: 'Calm Waters',
-          category: 'Nature Sounds',
-          duration: '5:32',
-          source: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1baf.mp3?filename=calm-river-ambience-loop-125071.mp3',
-          isBuiltIn: true
-        },
-        {
-          id: '2',
-          title: 'Forest Meditation',
-          category: 'Nature Sounds',
-          duration: '4:15',
-          source: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_82429925a9.mp3?filename=forest-with-small-river-birds-and-nature-field-recording-6735.mp3',
-          isBuiltIn: true
-        },
-        {
-          id: '3',
-          title: 'Deep Focus',
-          category: 'Binaural Beats',
-          duration: '6:45',
-          source: 'https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31ab7a71.mp3?filename=ambient-piano-ampamp-strings-10711.mp3',
-          isBuiltIn: true
-        },
-        {
-          id: '4',
-          title: 'Dream State',
-          category: 'Binaural Beats',
-          duration: '8:20',
-          source: 'https://cdn.pixabay.com/download/audio/2021/04/08/audio_7ef676c9c8.mp3?filename=relaxing-mountains-rivers-amp-birds-singing-5816.mp3',
-          isBuiltIn: true
-        }
-      ]);
-    }
   }, [toast]);
+
+  // Function to set default tracks
+  const setDefaultTracks = () => {
+    setTracks([
+      {
+        id: '1',
+        title: 'Calm Waters',
+        category: 'Nature Sounds',
+        duration: '5:32',
+        source: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1baf.mp3?filename=calm-river-ambience-loop-125071.mp3',
+        isBuiltIn: true
+      },
+      {
+        id: '2',
+        title: 'Forest Meditation',
+        category: 'Nature Sounds',
+        duration: '4:15',
+        source: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_82429925a9.mp3?filename=forest-with-small-river-birds-and-nature-field-recording-6735.mp3',
+        isBuiltIn: true
+      },
+      {
+        id: '3',
+        title: 'Deep Focus',
+        category: 'Binaural Beats',
+        duration: '6:45',
+        source: 'https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31ab7a71.mp3?filename=ambient-piano-ampamp-strings-10711.mp3',
+        isBuiltIn: true
+      },
+      {
+        id: '4',
+        title: 'Dream State',
+        category: 'Binaural Beats',
+        duration: '8:20',
+        source: 'https://cdn.pixabay.com/download/audio/2021/04/08/audio_7ef676c9c8.mp3?filename=relaxing-mountains-rivers-amp-birds-singing-5816.mp3',
+        isBuiltIn: true
+      }
+    ]);
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -117,14 +126,27 @@ const MusicPage = () => {
       }
     };
 
+    const handleAudioError = (e: Event) => {
+      console.error('Audio error:', e);
+      setError('Could not play this track. Try another one.');
+      setIsPlaying(false);
+      toast({
+        title: "Playback Error",
+        description: "Could not play the selected track. The file might be corrupted or unavailable.",
+        variant: "destructive",
+      });
+    };
+
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('ended', handleTrackEnd);
+    audio.addEventListener('error', handleAudioError);
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
       audio.removeEventListener('ended', handleTrackEnd);
+      audio.removeEventListener('error', handleAudioError);
     };
-  }, [currentTrackIndex]);
+  }, [currentTrackIndex, toast]);
 
   const handleTrackEnd = () => {
     if (currentTrackIndex < tracks.length - 1) {
@@ -137,15 +159,28 @@ const MusicPage = () => {
   const playTrack = (index: number) => {
     setCurrentTrackIndex(index);
     setIsPlaying(true);
+    setError(null);
     
     if (audioRef.current) {
-      audioRef.current.src = tracks[index].source;
+      const track = tracks[index];
+      console.log(`Playing track: ${track.title}, Source: ${track.source}`);
+      
+      // Reset the audio element
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      
+      // Set new source and play
+      audioRef.current.src = track.source;
       audioRef.current.volume = volume;
+      
+      // Play with error handling
       audioRef.current.play().catch(error => {
         console.error('Error playing audio:', error);
+        setIsPlaying(false);
+        setError(`Could not play: ${error.message}`);
         toast({
           title: "Playback Error",
-          description: "Could not play the selected track.",
+          description: `Could not play "${track.title}". The audio might be unavailable.`,
           variant: "destructive",
         });
       });
@@ -160,11 +195,21 @@ const MusicPage = () => {
     
     if (isPlaying) {
       audioRef.current?.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current?.play();
+      if (audioRef.current) {
+        audioRef.current.play().catch(error => {
+          console.error('Error playing audio:', error);
+          setError(`Could not resume: ${error.message}`);
+          toast({
+            title: "Playback Error",
+            description: "Could not resume playback.",
+            variant: "destructive",
+          });
+        });
+        setIsPlaying(true);
+      }
     }
-    
-    setIsPlaying(!isPlaying);
   };
 
   const prevTrack = () => {
@@ -351,6 +396,7 @@ const MusicPage = () => {
                   ? tracks[currentTrackIndex].category || tracks[currentTrackIndex].artist || 'Relaxation sounds'
                   : 'Relaxation sounds'}
               </p>
+              {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
             </div>
             <div className="flex items-center">
               <Volume2 className="w-5 h-5 mr-2" />
@@ -379,21 +425,27 @@ const MusicPage = () => {
           
           {/* Controls */}
           <div className="flex justify-center items-center space-x-8">
-            <button onClick={prevTrack}>
+            <button onClick={prevTrack} aria-label="Previous track">
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
               onClick={togglePlayPause}
               className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center"
+              aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
             </button>
-            <button onClick={nextTrack}>
+            <button onClick={nextTrack} aria-label="Next track">
               <SkipForward className="w-6 h-6" />
             </button>
           </div>
           
-          <audio ref={audioRef} />
+          <audio 
+            ref={audioRef} 
+            preload="auto" 
+            crossOrigin="anonymous"
+            onError={(e) => console.error("Audio element error:", e)}
+          />
         </div>
         
         {/* Upload form */}
@@ -408,6 +460,7 @@ const MusicPage = () => {
               <button 
                 onClick={() => setShowUploadForm(false)}
                 className="text-gray-500"
+                aria-label="Close upload form"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -463,58 +516,64 @@ const MusicPage = () => {
             <button 
               onClick={handleUpload}
               className="flex items-center text-sm text-mindboost-primary"
+              aria-label="Upload new track"
             >
               <Upload className="w-4 h-4 mr-1" /> Upload
             </button>
           </div>
           
           <div className="space-y-2">
-            {tracks.map((track, index) => (
-              <motion.div
-                key={track.id}
-                whileTap={{ scale: 0.98 }}
-                className={`p-3 rounded-lg flex justify-between items-center cursor-pointer ${
-                  currentTrackIndex === index
-                    ? 'bg-mindboost-light text-mindboost-dark'
-                    : 'bg-white'
-                }`}
-              >
-                <div 
-                  className="flex items-center flex-1"
-                  onClick={() => playTrack(index)}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+            {tracks.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No tracks available. Try uploading one!</p>
+            ) : (
+              tracks.map((track, index) => (
+                <motion.div
+                  key={track.id}
+                  whileTap={{ scale: 0.98 }}
+                  className={`p-3 rounded-lg flex justify-between items-center cursor-pointer ${
                     currentTrackIndex === index
-                      ? 'bg-mindboost-primary text-white'
-                      : 'bg-gray-100'
-                  }`}>
-                    {currentTrackIndex === index && isPlaying 
-                      ? <Pause className="w-4 h-4" /> 
-                      : <Play className="w-4 h-4" />
-                    }
+                      ? 'bg-mindboost-light text-mindboost-dark'
+                      : 'bg-white'
+                  }`}
+                >
+                  <div 
+                    className="flex items-center flex-1"
+                    onClick={() => playTrack(index)}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                      currentTrackIndex === index
+                        ? 'bg-mindboost-primary text-white'
+                        : 'bg-gray-100'
+                    }`}>
+                      {currentTrackIndex === index && isPlaying 
+                        ? <Pause className="w-4 h-4" /> 
+                        : <Play className="w-4 h-4" />
+                      }
+                    </div>
+                    <div>
+                      <p className="font-medium">{track.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {track.category || track.artist || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{track.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {track.category || track.artist || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
-                    </p>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 mr-2">{track.duration || '3:45'}</span>
+                    
+                    {/* Delete button for user uploads */}
+                    {!track.isBuiltIn && track.userId === user?.id && (
+                      <button
+                        onClick={() => handleDeleteTrack(track.id)}
+                        className="text-red-500 p-1"
+                        aria-label="Delete track"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-500 mr-2">{track.duration || '3:45'}</span>
-                  
-                  {/* Delete button for user uploads */}
-                  {!track.isBuiltIn && track.userId === user?.id && (
-                    <button
-                      onClick={() => handleDeleteTrack(track.id)}
-                      className="text-red-500 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
         
