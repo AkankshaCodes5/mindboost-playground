@@ -103,6 +103,27 @@ const MusicPage = () => {
     fetchTracks();
   }, [toast]);
 
+  // Initialize audio element on component mount
+  useEffect(() => {
+    // Create audio element if it doesn't exist
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      // Set CORS policy to allow cross-origin audio
+      audioRef.current.crossOrigin = 'anonymous';
+      audioRef.current.preload = 'auto';
+      audioRef.current.volume = volume;
+      console.log("Created new Audio element");
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, []);
+
   // Set up audio element event listeners
   useEffect(() => {
     const audio = audioRef.current;
@@ -161,14 +182,10 @@ const MusicPage = () => {
     };
   }, [currentTrackIndex, toast]);
 
-  // Create audio element if it doesn't exist
+  // Update audio volume when volume state changes
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
+    if (audioRef.current) {
       audioRef.current.volume = volume;
-      audioRef.current.preload = 'auto';
-      audioRef.current.crossOrigin = 'anonymous';
-      console.log("Created new Audio element");
     }
   }, [volume]);
 
@@ -197,9 +214,10 @@ const MusicPage = () => {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       
-      // Set new source
-      audioRef.current.src = track.source;
-      audioRef.current.volume = volume;
+      // Set new source - use direct URL format that works on both desktop and mobile
+      const audioSource = track.source;
+      audioRef.current.src = audioSource;
+      audioRef.current.load(); // Important for mobile
       
       // Play with error handling
       const playPromise = audioRef.current.play();
@@ -214,13 +232,24 @@ const MusicPage = () => {
             setIsPlaying(false);
             setError(`Could not play: ${error.message}`);
             
-            // Try to fallback to default tracks if needed
+            // Try mobile-friendly playback approach
             if (track.isBuiltIn) {
               toast({
-                title: "Playback Error",
-                description: `Could not play "${track.title}". The audio might be unavailable.`,
-                variant: "destructive",
+                title: "Playback Notice",
+                description: "Trying alternate playback method...",
               });
+              
+              // Force a brief user interaction with the audio element
+              setTimeout(() => {
+                if (audioRef.current) {
+                  const newPlayPromise = audioRef.current.play();
+                  if (newPlayPromise !== undefined) {
+                    newPlayPromise.catch(e => {
+                      console.error("Second attempt failed:", e);
+                    });
+                  }
+                }
+              }, 500);
             }
           });
       }
@@ -492,14 +521,6 @@ const MusicPage = () => {
               <SkipForward className="w-6 h-6" />
             </button>
           </div>
-          
-          {/* Hidden but functional audio element */}
-          {/* Note: This serves as a backup, but we primarily use the audioRef.current for playback */}
-          <audio 
-            preload="auto" 
-            crossOrigin="anonymous"
-            onError={(e) => console.error("Embedded audio element error:", e)}
-          />
         </div>
         
         {/* Upload form */}

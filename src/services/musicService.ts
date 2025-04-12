@@ -66,28 +66,28 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Calm Waters',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0fd5d6e75.mp3',
     },
     {
       id: 'default-2',
       title: 'Forest Meditation',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7aa9cb7f4d.mp3',
     },
     {
       id: 'default-3',
       title: 'Deep Focus',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-just-chill-16.mp3',
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/01/20/audio_b1e0010045.mp3',
     },
     {
       id: 'default-4',
       title: 'Dream State',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3',
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/05/16/audio_d54ae7d533.mp3',
     }
   ];
   

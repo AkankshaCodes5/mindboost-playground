@@ -102,14 +102,20 @@ const MatchingGame = () => {
       });
       
       try {
+        // Save the game score - this will update Dashboard stats
         addMatchingGameScore(score, attempts, duration);
         
         toast({
           title: "Game Complete!",
-          description: `You found all matches in ${attempts} attempts.`,
+          description: `You found all matches in ${attempts} attempts and scored ${score} points!`,
         });
       } catch (error) {
         console.error("Error saving game score:", error);
+        toast({
+          title: "Score Saving Error",
+          description: "Your score was calculated but couldn't be saved.",
+          variant: "destructive"
+        });
       }
     }
   }, [matchedPairs, attempts, gameStarted, startTime, addMatchingGameScore, toast]);

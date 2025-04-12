@@ -15,10 +15,11 @@ const Dashboard = () => {
     getTotalWaterToday, 
     getWaterPercentage, 
     getMeditationMinutesToday,
-    getGameScoresByType
+    getGameScoresByType,
+    getDailyProgressSummary
   } = useProgress();
 
-  // Get game scores count for today
+  // Get game scores count for today using the daily progress summary
   const getGameScoresCount = () => {
     // Count all game scores from different types
     const matchingGames = getGameScoresByType('matching').length;
@@ -28,6 +29,9 @@ const Dashboard = () => {
     
     return matchingGames + numberRecallGames + objectSequencingGames + stroopTestGames;
   };
+
+  // Get daily progress summary directly
+  const dailyProgress = getDailyProgressSummary();
 
   const container = {
     hidden: { opacity: 0 },
@@ -69,17 +73,17 @@ const Dashboard = () => {
               <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
                 <Brain className="w-6 h-6 text-mindboost-primary mb-2" />
                 <span className="text-xs text-gray-500">Memory Games</span>
-                <span className="font-semibold text-mindboost-dark">{getGameScoresCount()}</span>
+                <span className="font-semibold text-mindboost-dark">{dailyProgress.gameScoresCount}</span>
               </div>
               <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
                 <Timer className="w-6 h-6 text-mindboost-primary mb-2" />
                 <span className="text-xs text-gray-500">Meditation</span>
-                <span className="font-semibold text-mindboost-dark">{getMeditationMinutesToday()} min</span>
+                <span className="font-semibold text-mindboost-dark">{dailyProgress.meditationMinutes} min</span>
               </div>
               <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
                 <Droplet className="w-6 h-6 text-mindboost-primary mb-2" />
                 <span className="text-xs text-gray-500">Water</span>
-                <span className="font-semibold text-mindboost-dark">{getWaterPercentage()}%</span>
+                <span className="font-semibold text-mindboost-dark">{dailyProgress.waterPercentage}%</span>
               </div>
             </div>
           </motion.div>

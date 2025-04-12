@@ -27,12 +27,18 @@ export const ensureMusicStorageBucket = async () => {
     if (!musicBucketExists) {
       console.log("Creating music storage bucket");
       const { error: createError } = await supabase.storage.createBucket('music', {
-        public: true
+        public: true,
+        fileSizeLimit: 10485760, // 10MB limit
+        allowedMimeTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/webm']
       });
       
       if (createError) {
         console.error("Error creating music bucket:", createError);
+      } else {
+        console.log("Successfully created music bucket");
       }
+    } else {
+      console.log("Music bucket already exists");
     }
   } catch (e) {
     console.error("Error in ensureMusicStorageBucket:", e);
