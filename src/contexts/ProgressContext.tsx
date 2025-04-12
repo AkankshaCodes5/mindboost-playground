@@ -81,7 +81,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const userId = user?.id || 'anonymous';
   
-  // State for all tracking features
+  // State for all tracking features - initialize as empty arrays to avoid "not iterable" errors
   const [gameScores, setGameScores] = useState<GameScore[]>([]);
   const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
   const [meditationSessions, setMeditationSessions] = useState<MeditationSession[]>([]);
@@ -432,7 +432,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
         // Process and combine the scores
         const allScores: GameScore[] = [];
         
-        // Process matching scores
+        // Process matching scores with safe type checking
         if (Array.isArray(matchingScores)) {
           matchingScores.forEach((dbScore: any) => {
             if (dbScore && typeof dbScore === 'object' && dbScore.score) {
@@ -447,7 +447,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
           });
         }
         
-        // Process number recall scores
+        // Process number recall scores with safe type checking
         if (Array.isArray(numberRecallScores)) {
           numberRecallScores.forEach((dbScore: any) => {
             if (dbScore && typeof dbScore === 'object' && dbScore.score) {
@@ -463,7 +463,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
           });
         }
         
-        // Process object sequencing scores
+        // Process object sequencing scores with safe type checking
         if (Array.isArray(objectSequencingScores)) {
           objectSequencingScores.forEach((dbScore: any) => {
             if (dbScore && typeof dbScore === 'object' && dbScore.score) {
@@ -478,7 +478,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
           });
         }
         
-        // Process stroop test scores
+        // Process stroop test scores with safe type checking
         if (Array.isArray(stroopTestScores)) {
           stroopTestScores.forEach((dbScore: any) => {
             if (dbScore && typeof dbScore === 'object' && dbScore.score) {

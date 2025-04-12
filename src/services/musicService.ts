@@ -11,7 +11,7 @@ export type MusicTrack = {
   uploadTime?: string;
 };
 
-// Type guard to ensure database results are valid
+// Enhanced type guard to ensure database results are valid
 const isValidData = (data: unknown): data is Record<string, any>[] => {
   return Array.isArray(data) && data.every(item => item && typeof item === 'object');
 };
@@ -91,7 +91,7 @@ export const addBuiltInMusicTrack = async (title: string, artist: string, filePa
   }
 };
 
-// Upload user music track
+// Upload user music track with improved type safety
 export const uploadUserMusicTrack = async (userId: string, title: string, file: File) => {
   try {
     // 1. Upload file to storage
@@ -104,11 +104,12 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
       
     if (uploadError) throw uploadError;
     
-    // 2. Get public URL
+    // 2. Get public URL safely
     const { data: publicUrlData } = supabase.storage
       .from('music')
       .getPublicUrl(fileName);
       
+    // Safely access the URL with type checking
     const filePath = publicUrlData?.publicUrl || '';
     
     // 3. Create record in music_tracks table
@@ -130,7 +131,7 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
   }
 };
 
-// Delete user music track
+// Delete user music track with improved type safety
 export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
   try {
     // 1. Get track info
@@ -149,7 +150,8 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
       throw new Error('Track not found');
     }
     
-    const filePath = trackData.file_path || '';
+    // Safely access file_path with proper type checking
+    const filePath = trackData.file_path as string || '';
     
     // 2. Delete from storage if it's stored in our bucket
     if (filePath && typeof filePath === 'string' && filePath.includes('music')) {

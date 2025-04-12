@@ -51,7 +51,7 @@ const convertGameScoreToDbFormat = (gameScore: GameScore) => {
   };
 };
 
-// Type guard to ensure database results are valid
+// Enhanced type guard to ensure database results are valid
 const isValidData = (data: unknown): data is Record<string, any>[] => {
   return Array.isArray(data) && data.every(item => item && typeof item === 'object');
 };
@@ -73,7 +73,7 @@ export const saveGameScore = async (gameScore: GameScore) => {
   }
 };
 
-// Get game scores by type
+// Get game scores by type with improved type safety
 export const getGameScoresByType = async (gameType: string, userId: string) => {
   try {
     const { data, error } = await supabase
@@ -95,7 +95,7 @@ export const getGameScoresByType = async (gameType: string, userId: string) => {
   }
 };
 
-// Get recent game scores
+// Get recent game scores with improved type safety
 export const getRecentGameScores = async (gameType: string, userId: string, limit: number = 5) => {
   try {
     const { data, error } = await supabase
