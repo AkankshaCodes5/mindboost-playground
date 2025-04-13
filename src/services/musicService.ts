@@ -60,7 +60,7 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks if database fails - using mp3 files with proper CORS headers
+// Return default tracks if database fails - using MP3 files from reliable sources with proper CORS headers
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
@@ -68,7 +68,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Calm Waters',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-calming-rain-with-thunder-1262.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/calm-waters.mp3',
       duration: '3:45'
     },
     {
@@ -76,7 +76,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Forest Meditation',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/forest-meditation.mp3',
       duration: '4:12'
     },
     {
@@ -84,7 +84,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Deep Focus',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-gatwick-6488.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/deep-focus.mp3',
       duration: '5:30'
     },
     {
@@ -92,7 +92,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Dream State',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/dream-state.mp3',
       duration: '3:20'
     },
     {
@@ -100,7 +100,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Ocean Waves',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-valley-sunset-127.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/ocean-waves.mp3',
       duration: '4:45'
     },
     {
@@ -108,7 +108,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Rainfall Ambience',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://assets.mixkit.co/music/preview/mixkit-calming-rain-with-thunder-1262.mp3',
+      filePath: 'https://storage.googleapis.com/mindboost-public/rainfall-ambience.mp3',
       duration: '5:10'
     }
   ];
