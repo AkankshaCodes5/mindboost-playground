@@ -9,6 +9,7 @@ export type MusicTrack = {
   filePath: string;
   userId?: string;
   uploadTime?: string;
+  duration?: string; // Optional duration property
 };
 
 // Enhanced type guard to ensure database results are valid
@@ -25,7 +26,8 @@ const convertDbTrackToClientFormat = (track: Record<string, any>): MusicTrack =>
     isBuiltIn: Boolean(track.is_built_in),
     filePath: track.file_path || '',
     userId: track.user_id,
-    uploadTime: track.upload_time
+    uploadTime: track.upload_time,
+    duration: track.duration || '3:45' // Default duration
   };
 };
 
@@ -67,6 +69,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       artist: 'Nature Sounds',
       isBuiltIn: true,
       filePath: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0fd5d6e75.mp3',
+      duration: '3:45'
     },
     {
       id: 'default-2',
@@ -74,6 +77,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       artist: 'Nature Sounds',
       isBuiltIn: true,
       filePath: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7aa9cb7f4d.mp3',
+      duration: '4:12'
     },
     {
       id: 'default-3',
@@ -81,6 +85,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       artist: 'Binaural Beats',
       isBuiltIn: true,
       filePath: 'https://cdn.pixabay.com/download/audio/2022/01/20/audio_b1e0010045.mp3',
+      duration: '5:30'
     },
     {
       id: 'default-4',
@@ -88,6 +93,23 @@ export const getDefaultTracks = (): MusicTrack[] => {
       artist: 'Binaural Beats',
       isBuiltIn: true,
       filePath: 'https://cdn.pixabay.com/download/audio/2022/05/16/audio_d54ae7d533.mp3',
+      duration: '3:20'
+    },
+    {
+      id: 'default-5',
+      title: 'Ocean Waves',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_6b534d075f.mp3',
+      duration: '4:45'
+    },
+    {
+      id: 'default-6',
+      title: 'Rainfall Ambience',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://cdn.pixabay.com/download/audio/2022/02/11/audio_cb722670e7.mp3',
+      duration: '5:10'
     }
   ];
   
@@ -137,16 +159,30 @@ export const addBuiltInMusicTrack = async (title: string, artist: string, filePa
   }
 };
 
-// Upload user music track with improved type safety
+// Upload user music track with improved type safety and error handling
 export const uploadUserMusicTrack = async (userId: string, title: string, file: File) => {
   try {
+    // Check file type
+    if (!file.type.startsWith('audio/')) {
+      throw new Error('File must be an audio file');
+    }
+    
+    // Check file size (limit to 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      throw new Error('File size exceeds 10MB limit');
+    }
+    
     // 1. Upload file to storage
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('music')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
       
     if (uploadError) throw uploadError;
     
@@ -158,6 +194,10 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
     // Safely access the URL with type checking
     const filePath = publicUrlData?.publicUrl || '';
     
+    if (!filePath) {
+      throw new Error('Failed to get public URL for uploaded file');
+    }
+    
     // 3. Create record in music_tracks table
     const { data: trackData, error: trackError } = await supabase
       .from('music_tracks')
@@ -165,7 +205,8 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
         title,
         is_built_in: false,
         file_path: filePath,
-        user_id: userId
+        user_id: userId,
+        upload_time: new Date().toISOString()
       });
       
     if (trackError) throw trackError;

@@ -1,9 +1,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipForward, SkipBack, Volume2, Upload, X } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Volume2, Upload, X, Music } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllMusicTracks, getDefaultTracks, uploadUserMusicTrack, deleteUserMusicTrack } from '../../services/musicService';
 
@@ -24,6 +24,8 @@ const MusicPage = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -53,8 +55,7 @@ const MusicPage = () => {
             source: track.filePath,
             isBuiltIn: track.isBuiltIn,
             userId: track.userId,
-            // Estimate duration (this would normally come from metadata)
-            duration: '3:45'
+            duration: track.duration || '3:45'
           }));
           
           console.log("Successfully fetched tracks:", formattedTracks);
@@ -70,7 +71,7 @@ const MusicPage = () => {
             category: 'Built-in',
             source: track.filePath,
             isBuiltIn: true,
-            duration: '3:45'
+            duration: track.duration || '3:45'
           }));
           setTracks(formattedDefaultTracks);
         }
@@ -92,7 +93,7 @@ const MusicPage = () => {
           category: 'Built-in',
           source: track.filePath,
           isBuiltIn: true,
-          duration: '3:45'
+          duration: track.duration || '3:45'
         }));
         setTracks(formattedDefaultTracks);
       } finally {
@@ -107,12 +108,18 @@ const MusicPage = () => {
   useEffect(() => {
     // Create audio element if it doesn't exist
     if (!audioRef.current) {
-      audioRef.current = new Audio();
+      const audio = new Audio();
       // Set CORS policy to allow cross-origin audio
-      audioRef.current.crossOrigin = 'anonymous';
-      audioRef.current.preload = 'auto';
-      audioRef.current.volume = volume;
-      console.log("Created new Audio element");
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      audio.volume = volume;
+      
+      // Force mobile browsers to play audio
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      
+      audioRef.current = audio;
+      console.log("Created new Audio element with mobile compatibility");
     }
     
     // Cleanup on unmount
@@ -120,6 +127,7 @@ const MusicPage = () => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
+        audioRef.current = null;
       }
     };
   }, []);
@@ -133,15 +141,22 @@ const MusicPage = () => {
     }
 
     const updateProgress = () => {
-      const duration = audio.duration;
-      const currentTime = audio.currentTime;
-      if (duration > 0) {
-        setProgress((currentTime / duration) * 100);
+      const audioDuration = audio.duration;
+      const audioCurrentTime = audio.currentTime;
+      
+      if (audioDuration > 0) {
+        setProgress((audioCurrentTime / audioDuration) * 100);
+        setCurrentTime(audioCurrentTime);
       }
     };
 
     const handleAudioEnded = () => {
       handleTrackEnd();
+    };
+    
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+      console.log("Audio loaded, duration:", audio.duration);
     };
 
     const handleAudioError = (e: Event) => {
@@ -166,11 +181,13 @@ const MusicPage = () => {
     audio.removeEventListener('timeupdate', updateProgress);
     audio.removeEventListener('ended', handleAudioEnded);
     audio.removeEventListener('error', handleAudioError);
+    audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
 
     // Add new listeners
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('ended', handleAudioEnded);
     audio.addEventListener('error', handleAudioError);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
 
     // Cleanup on unmount
     return () => {
@@ -178,6 +195,7 @@ const MusicPage = () => {
         audio.removeEventListener('timeupdate', updateProgress);
         audio.removeEventListener('ended', handleAudioEnded);
         audio.removeEventListener('error', handleAudioError);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       }
     };
   }, [currentTrackIndex, toast]);
@@ -189,6 +207,15 @@ const MusicPage = () => {
     }
   }, [volume]);
 
+  // Format time from seconds to MM:SS
+  const formatTime = (time: number): string => {
+    if (isNaN(time)) return "0:00";
+    
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+  };
+
   const handleTrackEnd = () => {
     if (currentTrackIndex < tracks.length - 1) {
       setCurrentTrackIndex(prev => prev + 1);
@@ -199,6 +226,12 @@ const MusicPage = () => {
 
   const playTrack = (index: number) => {
     try {
+      // If we're already playing a track, stop it first
+      if (isPlaying && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      
       setCurrentTrackIndex(index);
       setError(null);
       
@@ -232,24 +265,15 @@ const MusicPage = () => {
             setIsPlaying(false);
             setError(`Could not play: ${error.message}`);
             
-            // Try mobile-friendly playback approach
-            if (track.isBuiltIn) {
-              toast({
-                title: "Playback Notice",
-                description: "Trying alternate playback method...",
-              });
-              
-              // Force a brief user interaction with the audio element
-              setTimeout(() => {
-                if (audioRef.current) {
-                  const newPlayPromise = audioRef.current.play();
-                  if (newPlayPromise !== undefined) {
-                    newPlayPromise.catch(e => {
-                      console.error("Second attempt failed:", e);
-                    });
-                  }
-                }
-              }, 500);
+            // Try mobile-friendly playback approach with user interaction
+            toast({
+              title: "Playback Notice",
+              description: "Tap the play button again to enable audio on your device",
+            });
+            
+            // Reset for another attempt
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
             }
           });
       }
@@ -282,7 +306,7 @@ const MusicPage = () => {
             setError(`Could not resume: ${error.message}`);
             toast({
               title: "Playback Error",
-              description: "Could not resume playback.",
+              description: "Could not resume playback. Try tapping play again.",
               variant: "destructive",
             });
           });
@@ -309,16 +333,15 @@ const MusicPage = () => {
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || isNaN(audioRef.current.duration)) return;
     
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const pos = (e.clientX - rect.left) / rect.width;
-    const duration = audioRef.current.duration;
+    const newTime = audioRef.current.duration * pos;
     
-    if (isNaN(duration)) return;
-    
-    audioRef.current.currentTime = duration * pos;
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
   };
 
   const handleUpload = () => {
@@ -400,7 +423,7 @@ const MusicPage = () => {
         source: track.filePath,
         isBuiltIn: track.isBuiltIn,
         userId: track.userId,
-        duration: '3:45' // Placeholder
+        duration: track.duration || '3:45'
       }));
       
       setTracks(formattedTracks);
@@ -456,7 +479,7 @@ const MusicPage = () => {
   
   return (
     <MobileLayout title="Music & Sounds">
-      <div className="p-4">
+      <div className="p-4 pb-16">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-mindboost-dark mb-1">Relaxation Sounds</h1>
           <p className="text-gray-500">
@@ -465,9 +488,9 @@ const MusicPage = () => {
         </div>
         
         {/* Current track player */}
-        <div className="bg-mindboost-primary text-white rounded-xl p-4 mb-6">
+        <div className="bg-mindboost-primary text-white rounded-xl p-4 mb-6 shadow-md">
           <div className="flex items-center justify-between mb-3">
-            <div>
+            <div className="flex-1">
               <h3 className="font-semibold">
                 {currentTrackIndex >= 0 
                   ? tracks[currentTrackIndex].title 
@@ -475,7 +498,7 @@ const MusicPage = () => {
               </h3>
               <p className="text-sm opacity-80">
                 {currentTrackIndex >= 0 
-                  ? tracks[currentTrackIndex].category || tracks[currentTrackIndex].artist || 'Relaxation sounds'
+                  ? tracks[currentTrackIndex].artist || tracks[currentTrackIndex].category || 'Relaxation sounds'
                   : 'Relaxation sounds'}
               </p>
               {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
@@ -490,37 +513,72 @@ const MusicPage = () => {
                 value={volume}
                 onChange={handleVolumeChange}
                 className="w-20"
+                aria-label="Volume control"
               />
             </div>
           </div>
           
+          {/* Time display */}
+          <div className="flex justify-between text-xs mb-1 px-1">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+          
           {/* Progress bar */}
           <div 
-            className="w-full bg-white bg-opacity-20 h-1.5 rounded-full mb-4 cursor-pointer"
+            className="w-full bg-white bg-opacity-20 h-2 rounded-full mb-4 cursor-pointer"
             onClick={handleProgressClick}
+            aria-label="Track progress"
           >
             <div 
-              className="bg-white h-full rounded-full"
+              className="bg-white h-full rounded-full relative"
               style={{ width: `${progress}%` }}
-            ></div>
+            >
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3"></div>
+            </div>
           </div>
           
           {/* Controls */}
           <div className="flex justify-center items-center space-x-8">
-            <button onClick={prevTrack} aria-label="Previous track">
+            <button 
+              onClick={prevTrack} 
+              className="focus:outline-none hover:opacity-80 transition-opacity"
+              aria-label="Previous track"
+            >
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
               onClick={togglePlayPause}
-              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center"
+              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
             </button>
-            <button onClick={nextTrack} aria-label="Next track">
+            <button 
+              onClick={nextTrack} 
+              className="focus:outline-none hover:opacity-80 transition-opacity"
+              aria-label="Next track"
+            >
               <SkipForward className="w-6 h-6" />
             </button>
           </div>
+          
+          {/* Sound wave animation when playing */}
+          {isPlaying && (
+            <div className="flex justify-center mt-3">
+              {[...Array(5)].map((_, i) => (
+                <div 
+                  key={i}
+                  className="bg-white w-1 mx-0.5 rounded-full animate-pulse" 
+                  style={{ 
+                    height: `${Math.random() * 12 + 8}px`, 
+                    animationDelay: `${i * 0.15}s`,
+                    animationDuration: `${0.8 + Math.random() * 0.4}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
         
         {/* Upload form */}
@@ -534,7 +592,7 @@ const MusicPage = () => {
               <h3 className="font-semibold">Upload New Track</h3>
               <button 
                 onClick={() => setShowUploadForm(false)}
-                className="text-gray-500"
+                className="text-gray-500 focus:outline-none"
                 aria-label="Close upload form"
               >
                 <X className="w-5 h-5" />
@@ -575,7 +633,7 @@ const MusicPage = () => {
               
               <button
                 type="submit"
-                className="w-full mindboost-button"
+                className="w-full bg-mindboost-primary text-white py-2 rounded-md hover:bg-mindboost-primary/90 transition-colors disabled:opacity-50"
                 disabled={isUploading}
               >
                 {isUploading ? 'Uploading...' : 'Upload Track'}
@@ -584,10 +642,13 @@ const MusicPage = () => {
           </motion.div>
         )}
         
-        {/* Track list */}
+        {/* Track list section */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold text-mindboost-dark">Available Tracks</h2>
+            <h2 className="font-semibold text-mindboost-dark flex items-center">
+              <Music className="w-5 h-5 mr-2 text-mindboost-primary" />
+              Available Tracks
+            </h2>
             <button 
               onClick={handleUpload}
               className="flex items-center text-sm text-mindboost-primary"
@@ -597,20 +658,25 @@ const MusicPage = () => {
             </button>
           </div>
           
+          {/* Track loading state */}
           {loadingTracks ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">Loading tracks...</p>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mindboost-primary mx-auto"></div>
+              <p className="text-gray-500 mt-2">Loading tracks...</p>
             </div>
           ) : (
             <div className="space-y-2">
               {tracks.length === 0 ? (
-                <p className="text-center text-gray-500 py-4">No tracks available. Try uploading one!</p>
+                <div className="text-center py-8 bg-white rounded-lg shadow-sm">
+                  <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">No tracks available. Try uploading one!</p>
+                </div>
               ) : (
                 tracks.map((track, index) => (
                   <motion.div
                     key={track.id}
                     whileTap={{ scale: 0.98 }}
-                    className={`p-3 rounded-lg flex justify-between items-center cursor-pointer ${
+                    className={`p-3 rounded-lg flex justify-between items-center cursor-pointer shadow-sm ${
                       currentTrackIndex === index
                         ? 'bg-mindboost-light text-mindboost-dark'
                         : 'bg-white'
@@ -620,31 +686,34 @@ const MusicPage = () => {
                       className="flex items-center flex-1"
                       onClick={() => playTrack(index)}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
                         currentTrackIndex === index
                           ? 'bg-mindboost-primary text-white'
                           : 'bg-gray-100'
                       }`}>
                         {currentTrackIndex === index && isPlaying 
-                          ? <Pause className="w-4 h-4" /> 
-                          : <Play className="w-4 h-4" />
+                          ? <Pause className="w-5 h-5" /> 
+                          : <Play className="w-5 h-5 ml-0.5" />
                         }
                       </div>
                       <div>
-                        <p className="font-medium">{track.title}</p>
+                        <p className="font-medium line-clamp-1">{track.title}</p>
                         <p className="text-xs text-gray-500">
-                          {track.category || track.artist || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
+                          {track.artist || track.category || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-2">{track.duration || '3:45'}</span>
+                      <span className="text-sm text-gray-500 mr-3">{track.duration}</span>
                       
                       {/* Delete button for user uploads */}
                       {!track.isBuiltIn && track.userId === user?.id && (
                         <button
-                          onClick={() => handleDeleteTrack(track.id)}
-                          className="text-red-500 p-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTrack(track.id);
+                          }}
+                          className="text-red-500 p-1 hover:bg-red-50 rounded-full"
                           aria-label="Delete track"
                         >
                           <X className="w-4 h-4" />

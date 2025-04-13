@@ -76,7 +76,7 @@ const Dashboard = () => {
 
   return (
     <MobileLayout title="Dashboard" showBack={false}>
-      <div className="p-4">
+      <div className="p-4 pb-16">
         <motion.div
           variants={container}
           initial="hidden"
@@ -85,7 +85,7 @@ const Dashboard = () => {
         >
           {/* Welcome section */}
           <motion.div variants={item} className="bg-white rounded-xl shadow-sm p-4">
-            <h2 className="text-xl font-semibold mb-1">Welcome, {user?.name}</h2>
+            <h2 className="text-xl font-semibold mb-1">Welcome, {user?.name || 'Friend'}</h2>
             <p className="text-gray-500">Ready to boost your mind today?</p>
           </motion.div>
 
@@ -154,11 +154,35 @@ const Dashboard = () => {
           </motion.div>
 
           {/* Daily challenge */}
-          <motion.div variants={item} className="bg-mindboost-primary text-white rounded-xl shadow-sm p-4">
-            <div className="flex justify-between items-start">
+          <motion.div 
+            variants={item} 
+            className="bg-mindboost-primary text-white rounded-xl shadow-sm p-4"
+            onClick={() => {
+              if (dailyProgress.gameScoresCount === 0) {
+                navigate('/games');
+              } else if (dailyProgress.meditationMinutes < 5) {
+                navigate('/meditation');
+              }
+            }}
+          >
+            <div className="flex justify-between items-start cursor-pointer">
               <div>
                 <h3 className="font-semibold mb-1">Daily Challenge</h3>
                 <p className="text-sm opacity-90">Complete a memory game and 5 minutes of meditation</p>
+                
+                {/* Challenge progress */}
+                <div className="mt-2 bg-white bg-opacity-20 h-2 rounded-full w-full overflow-hidden">
+                  <div 
+                    className="h-full bg-white rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${Math.min(
+                        100, 
+                        ((dailyProgress.gameScoresCount > 0 ? 50 : 0) + 
+                        (dailyProgress.meditationMinutes >= 5 ? 50 : Math.min(50, dailyProgress.meditationMinutes * 10)))
+                      )}%` 
+                    }}
+                  ></div>
+                </div>
               </div>
               <Award className="w-8 h-8" />
             </div>
