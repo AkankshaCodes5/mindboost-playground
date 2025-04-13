@@ -31,11 +31,52 @@ const MusicPage = () => {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingTracks, setLoadingTracks] = useState(true);
+  const [audioInitialized, setAudioInitialized] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Create and configure audio element on component mount
+  useEffect(() => {
+    const initializeAudio = () => {
+      // Clean up any existing audio element
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+      
+      // Create a new audio element
+      const audio = new Audio();
+      
+      // Set CORS policy
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'auto';
+      audio.volume = volume;
+      
+      // Mobile compatibility attributes
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      
+      // Set audio element reference
+      audioRef.current = audio;
+      setAudioInitialized(true);
+      
+      console.log("Audio element initialized with mobile compatibility");
+    };
+    
+    initializeAudio();
+    
+    // Cleanup on unmount
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Fetch tracks from Supabase with fallback to default tracks
   useEffect(() => {
@@ -104,47 +145,19 @@ const MusicPage = () => {
     fetchTracks();
   }, [toast]);
 
-  // Initialize audio element on component mount
+  // Set up audio element event listeners after it's initialized
   useEffect(() => {
-    // Create audio element if it doesn't exist
-    if (!audioRef.current) {
-      const audio = new Audio();
-      // Set CORS policy to allow cross-origin audio
-      audio.crossOrigin = 'anonymous';
-      audio.preload = 'auto';
-      audio.volume = volume;
-      
-      // Force mobile browsers to play audio
-      audio.setAttribute('playsinline', 'true');
-      audio.setAttribute('webkit-playsinline', 'true');
-      
-      audioRef.current = audio;
-      console.log("Created new Audio element with mobile compatibility");
-    }
+    if (!audioInitialized || !audioRef.current) return;
     
-    // Cleanup on unmount
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  // Set up audio element event listeners
-  useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) {
-      console.log("Audio element not available");
-      return;
-    }
 
     const updateProgress = () => {
+      if (!audio) return;
+      
       const audioDuration = audio.duration;
       const audioCurrentTime = audio.currentTime;
       
-      if (audioDuration > 0) {
+      if (audioDuration > 0 && !isNaN(audioDuration)) {
         setProgress((audioCurrentTime / audioDuration) * 100);
         setCurrentTime(audioCurrentTime);
       }
@@ -155,6 +168,8 @@ const MusicPage = () => {
     };
     
     const handleLoadedMetadata = () => {
+      if (!audio) return;
+      
       setDuration(audio.duration);
       console.log("Audio loaded, duration:", audio.duration);
     };
@@ -198,13 +213,12 @@ const MusicPage = () => {
         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       }
     };
-  }, [currentTrackIndex, toast]);
+  }, [audioInitialized, toast]);
 
   // Update audio volume when volume state changes
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    if (!audioRef.current) return;
+    audioRef.current.volume = volume;
   }, [volume]);
 
   // Format time from seconds to MM:SS
@@ -219,13 +233,20 @@ const MusicPage = () => {
   const handleTrackEnd = () => {
     if (currentTrackIndex < tracks.length - 1) {
       setCurrentTrackIndex(prev => prev + 1);
+      playTrack(currentTrackIndex + 1);
     } else {
       setCurrentTrackIndex(0);
+      playTrack(0);
     }
   };
 
   const playTrack = (index: number) => {
     try {
+      if (!audioInitialized || !audioRef.current) {
+        console.error("Audio element not available");
+        return;
+      }
+      
       // If we're already playing a track, stop it first
       if (isPlaying && audioRef.current) {
         audioRef.current.pause();
@@ -235,11 +256,6 @@ const MusicPage = () => {
       setCurrentTrackIndex(index);
       setError(null);
       
-      if (!audioRef.current) {
-        console.error("Audio element not available");
-        return;
-      }
-      
       const track = tracks[index];
       console.log(`Playing track: ${track.title}, Source: ${track.source}`);
       
@@ -247,13 +263,15 @@ const MusicPage = () => {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       
-      // Set new source - use direct URL format that works on both desktop and mobile
-      const audioSource = track.source;
-      audioRef.current.src = audioSource;
-      audioRef.current.load(); // Important for mobile
+      // Set new source - ensure it's a proper URL
+      audioRef.current.src = track.source;
+      
+      // Attempt to load the audio
+      audioRef.current.load();
       
       // Play with error handling
       const playPromise = audioRef.current.play();
+      
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
@@ -263,28 +281,34 @@ const MusicPage = () => {
           .catch(error => {
             console.error('Error playing audio:', error);
             setIsPlaying(false);
-            setError(`Could not play: ${error.message}`);
             
-            // Try mobile-friendly playback approach with user interaction
-            toast({
-              title: "Playback Notice",
-              description: "Tap the play button again to enable audio on your device",
-            });
-            
-            // Reset for another attempt
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
+            // On iOS, autoplay is often blocked
+            if (error.name === "NotAllowedError") {
+              setError("Tap play again to enable audio on your device");
+              toast({
+                title: "Playback Notice",
+                description: "Tap the play button again to enable audio on your device",
+              });
+            } else {
+              setError(`Could not play: ${error.message || 'Unknown error'}`);
+              
+              // Try to play the next track
+              setTimeout(() => nextTrack(), 2000);
             }
           });
       }
     } catch (e) {
       console.error("Error in playTrack:", e);
       setError(`Playback error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      setTimeout(() => nextTrack(), 2000);
     }
   };
 
   const togglePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioInitialized || !audioRef.current) {
+      console.error("Audio element not available");
+      return;
+    }
     
     if (currentTrackIndex === -1 && tracks.length > 0) {
       playTrack(0);
@@ -295,31 +319,44 @@ const MusicPage = () => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      // For mobile browsers that block autoplay, setting the src again can help
+      if (!audioRef.current.src && currentTrackIndex >= 0) {
+        audioRef.current.src = tracks[currentTrackIndex].source;
+        audioRef.current.load();
+      }
+      
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
             setIsPlaying(true);
+            setError(null);
           })
           .catch(error => {
-            console.error('Error playing audio:', error);
-            setError(`Could not resume: ${error.message}`);
-            toast({
-              title: "Playback Error",
-              description: "Could not resume playback. Try tapping play again.",
-              variant: "destructive",
-            });
+            console.error('Error resuming audio:', error);
+            
+            if (error.name === "NotAllowedError") {
+              setError("Tap play again to enable audio on your device");
+              toast({
+                title: "Playback Notice",
+                description: "Tap again to enable audio (browser restriction)",
+              });
+            } else {
+              setError(`Could not resume: ${error.message || 'Unknown error'}`);
+            }
           });
       }
     }
   };
 
   const prevTrack = () => {
+    if (tracks.length === 0) return;
     const newIndex = currentTrackIndex <= 0 ? tracks.length - 1 : currentTrackIndex - 1;
     playTrack(newIndex);
   };
 
   const nextTrack = () => {
+    if (tracks.length === 0) return;
     const newIndex = currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
     playTrack(newIndex);
   };
@@ -365,7 +402,7 @@ const MusicPage = () => {
       if (!file.type.startsWith('audio/')) {
         toast({
           title: "Invalid File Type",
-          description: "Please upload an audio file.",
+          description: "Please upload an audio file (MP3, WAV, OGG).",
           variant: "destructive",
         });
         return;
@@ -477,6 +514,34 @@ const MusicPage = () => {
     }
   };
   
+  // Render audio waveform animation
+  const renderWaveform = () => {
+    if (!isPlaying) return null;
+    
+    return (
+      <div className="flex justify-center items-end h-6 gap-[2px] mt-3">
+        {[...Array(16)].map((_, i) => {
+          const height = Math.random() * 16 + 4;
+          return (
+            <motion.div
+              key={i}
+              initial={{ height: 4 }}
+              animate={{ 
+                height: [4, height, 4],
+                transition: { 
+                  repeat: Infinity, 
+                  duration: 1 + Math.random() * 0.5,
+                  repeatType: 'reverse'
+                }
+              }}
+              className="bg-white w-1 rounded-full"
+            />
+          );
+        })}
+      </div>
+    );
+  };
+  
   return (
     <MobileLayout title="Music & Sounds">
       <div className="p-4 pb-16">
@@ -534,7 +599,7 @@ const MusicPage = () => {
               className="bg-white h-full rounded-full relative"
               style={{ width: `${progress}%` }}
             >
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3"></div>
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-md"></div>
             </div>
           </div>
           
@@ -549,7 +614,7 @@ const MusicPage = () => {
             </button>
             <button 
               onClick={togglePlayPause}
-              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors"
+              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors shadow-md"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
@@ -564,21 +629,7 @@ const MusicPage = () => {
           </div>
           
           {/* Sound wave animation when playing */}
-          {isPlaying && (
-            <div className="flex justify-center mt-3">
-              {[...Array(5)].map((_, i) => (
-                <div 
-                  key={i}
-                  className="bg-white w-1 mx-0.5 rounded-full animate-pulse" 
-                  style={{ 
-                    height: `${Math.random() * 12 + 8}px`, 
-                    animationDelay: `${i * 0.15}s`,
-                    animationDuration: `${0.8 + Math.random() * 0.4}s`
-                  }}
-                />
-              ))}
-            </div>
-          )}
+          {renderWaveform()}
         </div>
         
         {/* Upload form */}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
@@ -11,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/customClient";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { Switch } from "@/components/ui/switch";
 
 const WaterTracker = () => {
   const { 
@@ -37,6 +37,7 @@ const WaterTracker = () => {
   const [activeHours, setActiveHours] = useState(0);
   const [hourlyTarget, setHourlyTarget] = useState(0);
   const [remindersEnabled, setRemindersEnabled] = useState(waterSettings?.remindersEnabled || false);
+  const [permissionState, setPermissionState] = useState<string>("default");
   
   const { toast } = useToast();
 
@@ -67,6 +68,13 @@ const WaterTracker = () => {
     
     calculateActiveHours();
   }, [wakeUpTime, sleepTime, newGoal]);
+
+  // Check notification permission status on mount
+  useEffect(() => {
+    if ("Notification" in window) {
+      setPermissionState(Notification.permission);
+    }
+  }, []);
 
   // Load user data
   useEffect(() => {
@@ -149,8 +157,14 @@ const WaterTracker = () => {
     
     if (Notification.permission !== "granted") {
       const permission = await Notification.requestPermission();
+      setPermissionState(permission);
+      
       if (permission === "granted") {
         setRemindersEnabled(true);
+        updateWaterSettings({
+          ...waterSettings,
+          remindersEnabled: true
+        });
         toast({
           title: "Notifications enabled",
           description: "You'll receive water reminders during active hours",
@@ -158,12 +172,46 @@ const WaterTracker = () => {
       } else {
         toast({
           title: "Notifications disabled",
-          description: "Please enable notifications to receive water reminders",
+          description: "Please enable notifications in your browser settings to receive water reminders",
           variant: "destructive",
         });
       }
     } else {
-      setRemindersEnabled(!remindersEnabled);
+      // Toggle notifications if already granted
+      const newState = !remindersEnabled;
+      setRemindersEnabled(newState);
+      updateWaterSettings({
+        ...waterSettings,
+        remindersEnabled: newState
+      });
+      
+      toast({
+        title: newState ? "Reminders enabled" : "Reminders disabled",
+        description: newState 
+          ? "You'll receive water reminders during active hours" 
+          : "You won't receive water reminders",
+      });
+    }
+  };
+
+  const handleToggleReminders = (enabled: boolean) => {
+    if (enabled && Notification.permission !== "granted") {
+      // Need to request permission first
+      requestNotificationPermission();
+    } else {
+      // Just toggle the state if permission already granted
+      setRemindersEnabled(enabled);
+      updateWaterSettings({
+        ...waterSettings,
+        remindersEnabled: enabled
+      });
+      
+      toast({
+        title: enabled ? "Reminders enabled" : "Reminders disabled",
+        description: enabled 
+          ? "You'll receive water reminders during active hours" 
+          : "You won't receive water reminders",
+      });
     }
   };
 
@@ -329,24 +377,28 @@ const WaterTracker = () => {
                 </div>
               )}
               
-              {/* Reminder toggle */}
+              {/* Reminder toggle with switch */}
               <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
+                <Label htmlFor="reminder-switch" className="flex items-center gap-2 cursor-pointer">
                   <Bell className="h-4 w-4" /> Enable Reminders
                 </Label>
-                <button
-                  onClick={requestNotificationPermission}
-                  className={`px-3 py-1 rounded-md text-sm ${
-                    remindersEnabled 
-                      ? 'bg-mindboost-primary text-white' 
-                      : 'bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {remindersEnabled ? 'Enabled' : 'Disabled'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{remindersEnabled ? 'On' : 'Off'}</span>
+                  <Switch
+                    id="reminder-switch"
+                    checked={remindersEnabled}
+                    onCheckedChange={handleToggleReminders}
+                  />
+                </div>
               </div>
               
-              {remindersEnabled && (
+              {permissionState === "denied" && (
+                <p className="text-xs text-red-500">
+                  Notifications are blocked in your browser. You'll need to change your browser settings to enable reminders.
+                </p>
+              )}
+              
+              {remindersEnabled && permissionState === "granted" && (
                 <p className="text-xs text-blue-500">
                   You'll receive reminders during your active hours
                 </p>

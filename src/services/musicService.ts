@@ -60,7 +60,7 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks if database fails
+// Return default tracks if database fails - using mp3 files with proper CORS headers
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
@@ -68,7 +68,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Calm Waters',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0fd5d6e75.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-calming-rain-with-thunder-1262.mp3',
       duration: '3:45'
     },
     {
@@ -76,7 +76,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Forest Meditation',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_7aa9cb7f4d.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
       duration: '4:12'
     },
     {
@@ -84,7 +84,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Deep Focus',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/01/20/audio_b1e0010045.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-gatwick-6488.mp3',
       duration: '5:30'
     },
     {
@@ -92,7 +92,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Dream State',
       artist: 'Binaural Beats',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/05/16/audio_d54ae7d533.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-122.mp3',
       duration: '3:20'
     },
     {
@@ -100,7 +100,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Ocean Waves',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_6b534d075f.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-valley-sunset-127.mp3',
       duration: '4:45'
     },
     {
@@ -108,7 +108,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Rainfall Ambience',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://cdn.pixabay.com/download/audio/2022/02/11/audio_cb722670e7.mp3',
+      filePath: 'https://assets.mixkit.co/music/preview/mixkit-calming-rain-with-thunder-1262.mp3',
       duration: '5:10'
     }
   ];
