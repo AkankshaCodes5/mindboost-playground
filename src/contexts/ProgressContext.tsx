@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from "@/integrations/supabase/customClient";
@@ -10,6 +9,13 @@ type WaterLog = {
   timestamp: number;
   userId: string;
   amount: number; // in ml
+};
+
+// Water settings
+type WaterSettings = {
+  wakeUpTime: string; // HH:MM format
+  sleepTime: string; // HH:MM format
+  remindersEnabled: boolean;
 };
 
 // Meditation tracking
@@ -38,6 +44,10 @@ type ProgressContextType = {
   getTotalWaterToday: () => number;
   getWaterPercentage: () => number;
   getWaterLogsByDateRange: (startDate: number, endDate: number) => WaterLog[];
+  
+  // Water settings
+  waterSettings: WaterSettings | null;
+  updateWaterSettings: (settings: WaterSettings) => void;
   
   // Meditation tracking
   meditationSessions: MeditationSession[];
@@ -87,6 +97,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   const [meditationSessions, setMeditationSessions] = useState<MeditationSession[]>([]);
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [dailyWaterGoal, setDailyWaterGoal] = useState<number>(2000); // 2000ml default
+  const [waterSettings, setWaterSettings] = useState<WaterSettings | null>(null);
 
   // Load stored data on initial load
   useEffect(() => {
@@ -97,6 +108,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
         const storedMeditationSessions = localStorage.getItem('mindboost_meditation_sessions');
         const storedMusicTracks = localStorage.getItem('mindboost_music_tracks');
         const storedWaterGoal = localStorage.getItem('mindboost_water_goal');
+        const storedWaterSettings = localStorage.getItem('mindboost_water_settings');
         
         if (storedGameScores) {
           const parsedScores = JSON.parse(storedGameScores);
@@ -115,6 +127,17 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
           setMusicTracks(Array.isArray(parsedTracks) ? parsedTracks : []);
         }
         if (storedWaterGoal) setDailyWaterGoal(JSON.parse(storedWaterGoal));
+        if (storedWaterSettings) {
+          const parsedSettings = JSON.parse(storedWaterSettings);
+          setWaterSettings(parsedSettings);
+        } else {
+          // Initialize default water settings
+          setWaterSettings({
+            wakeUpTime: "07:00",
+            sleepTime: "22:00",
+            remindersEnabled: false
+          });
+        }
       } catch (error) {
         console.error("Error loading data from localStorage:", error);
       }
@@ -151,6 +174,24 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('mindboost_water_goal', JSON.stringify(dailyWaterGoal));
   }, [dailyWaterGoal]);
+  
+  useEffect(() => {
+    if (waterSettings) {
+      localStorage.setItem('mindboost_water_settings', JSON.stringify(waterSettings));
+    }
+  }, [waterSettings]);
+
+  // Update water settings
+  const updateWaterSettings = (settings: WaterSettings) => {
+    setWaterSettings(settings);
+    
+    // If user is authenticated, save to Supabase (would implement in a real app)
+    if (user) {
+      // Example of how this would be saved to Supabase
+      // saveWaterSettingsToSupabase(userId, settings);
+      console.log('Would save water settings to Supabase for user:', userId);
+    }
+  };
 
   // Game score methods with Supabase integration
   const addMatchingGameScore = async (score: number, attempts: number, duration: number) => {
@@ -409,7 +450,7 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     return result;
   };
 
-  // Fetch game scores from Supabase when user changes
+  // Fetch data from Supabase when user changes
   useEffect(() => {
     const fetchGameScores = async () => {
       if (!user) return;
@@ -536,6 +577,10 @@ export const ProgressProvider = ({ children }: { children: ReactNode }) => {
     getTotalWaterToday,
     getWaterPercentage,
     getWaterLogsByDateRange,
+    
+    // Water settings
+    waterSettings,
+    updateWaterSettings,
     
     // Meditation tracking
     meditationSessions,

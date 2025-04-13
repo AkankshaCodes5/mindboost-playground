@@ -2,10 +2,15 @@
 import { useState, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useProgress } from '../../contexts/ProgressContext';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from 'framer-motion';
-import { Droplet, Settings, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Droplet, Settings, Plus, ChevronUp, ChevronDown, Clock, Bell, Moon, Sun } from 'lucide-react';
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/customClient";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
 const WaterTracker = () => {
   const { 
@@ -14,21 +19,153 @@ const WaterTracker = () => {
     addWaterLog, 
     getTotalWaterToday, 
     getWaterPercentage,
-    waterLogs
+    waterLogs,
+    waterSettings,
+    updateWaterSettings,
   } = useProgress();
   
+  const { user } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [newGoal, setNewGoal] = useState(dailyWaterGoal);
   const [waterAmount, setWaterAmount] = useState(200);
   const [totalWater, setTotalWater] = useState(0);
   const [percentage, setPercentage] = useState(0);
   
+  // Water schedule settings
+  const [wakeUpTime, setWakeUpTime] = useState(waterSettings?.wakeUpTime || "07:00");
+  const [sleepTime, setSleepTime] = useState(waterSettings?.sleepTime || "22:00");
+  const [activeHours, setActiveHours] = useState(0);
+  const [hourlyTarget, setHourlyTarget] = useState(0);
+  const [remindersEnabled, setRemindersEnabled] = useState(waterSettings?.remindersEnabled || false);
+  
   const { toast } = useToast();
 
+  // Calculate active hours and hourly target when wake/sleep time changes
+  useEffect(() => {
+    const calculateActiveHours = () => {
+      if (!wakeUpTime || !sleepTime) return;
+      
+      const [wakeHours, wakeMinutes] = wakeUpTime.split(':').map(Number);
+      const [sleepHours, sleepMinutes] = sleepTime.split(':').map(Number);
+      
+      let wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+      let sleepTimeMinutes = sleepHours * 60 + sleepMinutes;
+      
+      // Handle case where sleep time is on the next day
+      if (sleepTimeMinutes < wakeTimeMinutes) {
+        sleepTimeMinutes += 24 * 60;
+      }
+      
+      const activeMinutes = sleepTimeMinutes - wakeTimeMinutes;
+      const hours = Math.round(activeMinutes / 60);
+      
+      setActiveHours(hours);
+      if (hours > 0) {
+        setHourlyTarget(Math.round(newGoal / hours));
+      }
+    };
+    
+    calculateActiveHours();
+  }, [wakeUpTime, sleepTime, newGoal]);
+
+  // Load user data
   useEffect(() => {
     setTotalWater(getTotalWaterToday());
     setPercentage(getWaterPercentage());
-  }, [getTotalWaterToday, getWaterPercentage, waterLogs]);
+    
+    // Initialize settings from context
+    if (waterSettings) {
+      setWakeUpTime(waterSettings.wakeUpTime || "07:00");
+      setSleepTime(waterSettings.sleepTime || "22:00");
+      setRemindersEnabled(waterSettings.remindersEnabled || false);
+    }
+  }, [getTotalWaterToday, getWaterPercentage, waterLogs, waterSettings]);
+
+  // Check if current time is within active hours
+  const isActiveHour = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    const [wakeHours, wakeMinutes] = wakeUpTime.split(':').map(Number);
+    const [sleepHours, sleepMinutes] = sleepTime.split(':').map(Number);
+    
+    const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+    let sleepTimeMinutes = sleepHours * 60 + sleepMinutes;
+    
+    if (sleepTimeMinutes < wakeTimeMinutes) {
+      sleepTimeMinutes += 24 * 60;
+      if (currentTimeMinutes < wakeTimeMinutes) {
+        return false;
+      }
+    }
+    
+    return currentTimeMinutes >= wakeTimeMinutes && 
+           currentTimeMinutes < sleepTimeMinutes;
+  };
+
+  // Handle notifications
+  useEffect(() => {
+    if (!remindersEnabled) return;
+    
+    const checkAndNotify = () => {
+      if (isActiveHour() && percentage < 100) {
+        // Show notification
+        if (Notification.permission === "granted") {
+          new Notification("MindBoost Water Reminder", {
+            body: "💧 Time to drink water and log your intake!",
+            icon: "/logo.png" 
+          });
+        }
+        
+        // Show toast notification
+        toast({
+          title: "Water Reminder",
+          description: "💧 Time to drink water and log your intake!",
+        });
+      }
+    };
+    
+    // Show notifications every hour
+    const interval = setInterval(checkAndNotify, 60 * 60 * 1000);
+    
+    // Also check on mount
+    checkAndNotify();
+    
+    return () => clearInterval(interval);
+  }, [remindersEnabled, percentage, toast]);
+
+  // Request notification permission
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      toast({
+        title: "Notifications not supported",
+        description: "Your browser doesn't support notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (Notification.permission !== "granted") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setRemindersEnabled(true);
+        toast({
+          title: "Notifications enabled",
+          description: "You'll receive water reminders during active hours",
+        });
+      } else {
+        toast({
+          title: "Notifications disabled",
+          description: "Please enable notifications to receive water reminders",
+          variant: "destructive",
+        });
+      }
+    } else {
+      setRemindersEnabled(!remindersEnabled);
+    }
+  };
 
   const handleAddWater = () => {
     addWaterLog(waterAmount);
@@ -42,17 +179,24 @@ const WaterTracker = () => {
     setPercentage(Math.min(100, Math.round(((totalWater + waterAmount) / dailyWaterGoal) * 100)));
   };
 
-  const handleSaveGoal = () => {
+  const handleSaveGoal = async () => {
     setDailyWaterGoal(newGoal);
+    
+    // Save water settings
+    const settings = {
+      wakeUpTime,
+      sleepTime,
+      remindersEnabled,
+    };
+    
+    updateWaterSettings(settings);
+    
     setShowSettings(false);
     
     toast({
-      title: "Goal Updated",
-      description: `Your daily water goal is now ${newGoal}ml.`,
+      title: "Settings Saved",
+      description: "Your water intake settings have been updated.",
     });
-    
-    // Recalculate percentage
-    setPercentage(Math.min(100, Math.round((totalWater / newGoal) * 100)));
   };
 
   const increaseWaterAmount = () => {
@@ -108,37 +252,105 @@ const WaterTracker = () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-sm p-4 mb-6"
           >
-            <h3 className="font-medium mb-3">Daily Water Goal</h3>
+            <h3 className="font-medium mb-3">Water Intake Settings</h3>
             
             <div className="mb-4 space-y-4">
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>500ml</span>
-                <span>4000ml</span>
-              </div>
-              <Slider
-                min={500}
-                max={4000}
-                step={100}
-                value={[newGoal]}
-                onValueChange={handleSliderChange}
-              />
-              <div className="text-center font-medium">{newGoal}ml</div>
+              {/* Daily water goal */}
+              <div>
+                <Label className="text-sm text-gray-500 mb-1 block">Daily Water Goal</Label>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>500ml</span>
+                  <span>4000ml</span>
+                </div>
+                <Slider
+                  min={500}
+                  max={4000}
+                  step={100}
+                  value={[newGoal]}
+                  onValueChange={handleSliderChange}
+                />
+                <div className="text-center font-medium mt-1">{newGoal}ml</div>
               
-              <div className="grid grid-cols-5 gap-2 mt-3">
-                {predefinedGoals.map(goal => (
-                  <button
-                    key={goal}
-                    onClick={() => setNewGoal(goal)}
-                    className={`text-xs py-1 px-2 rounded-md ${
-                      newGoal === goal 
-                        ? 'bg-mindboost-primary text-white' 
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {goal}ml
-                  </button>
-                ))}
+                <div className="grid grid-cols-5 gap-2 mt-3">
+                  {predefinedGoals.map(goal => (
+                    <button
+                      key={goal}
+                      onClick={() => setNewGoal(goal)}
+                      className={`text-xs py-1 px-2 rounded-md ${
+                        newGoal === goal 
+                          ? 'bg-mindboost-primary text-white' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {goal}ml
+                    </button>
+                  ))}
+                </div>
               </div>
+              
+              {/* Active hours settings */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="flex items-center gap-2 mb-1">
+                    <Sun className="h-4 w-4" /> Wake-up Time
+                  </Label>
+                  <Input
+                    type="time"
+                    value={wakeUpTime}
+                    onChange={(e) => setWakeUpTime(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div>
+                  <Label className="flex items-center gap-2 mb-1">
+                    <Moon className="h-4 w-4" /> Sleep Time
+                  </Label>
+                  <Input
+                    type="time"
+                    value={sleepTime}
+                    onChange={(e) => setSleepTime(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              {/* Active hours and reminders */}
+              {activeHours > 0 && (
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-700">Active Hours:</span>
+                    <span className="text-sm font-medium">{activeHours} hours</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-700">Hourly Target:</span>
+                    <span className="text-sm font-medium">{hourlyTarget} ml/hour</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Reminder toggle */}
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" /> Enable Reminders
+                </Label>
+                <button
+                  onClick={requestNotificationPermission}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    remindersEnabled 
+                      ? 'bg-mindboost-primary text-white' 
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {remindersEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+              
+              {remindersEnabled && (
+                <p className="text-xs text-blue-500">
+                  You'll receive reminders during your active hours
+                </p>
+              )}
             </div>
             
             <div className="flex justify-end">
@@ -149,23 +361,51 @@ const WaterTracker = () => {
                 Save
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Recommended daily water intake: 2000ml - 3000ml
-            </p>
           </motion.div>
         )}
         
         {/* Water glass visualization */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-6">
-            <div className="water-glass">
-              <motion.div
-                initial={{ height: '0%' }}
-                animate={{ height: `${percentage}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="water-fill"
+          <div className="relative w-40 h-40 mb-6">
+            <svg viewBox="0 0 100 100" className="w-full h-full">
+              {/* Glass outline */}
+              <path
+                d="M30,20 L30,80 C30,88 40,95 50,95 C60,95 70,88 70,80 L70,20 Z"
+                fill="none"
+                stroke="#e0e0e0"
+                strokeWidth="2"
               />
-            </div>
+              
+              {/* Water fill */}
+              <path
+                d="M30,80 C30,88 40,95 50,95 C60,95 70,88 70,80 L70,80 L30,80 Z"
+                fill="#d3e4fd"
+                transform={`translate(0, ${-60 * (percentage / 100)})`}
+              />
+              
+              {/* Glass top */}
+              <ellipse
+                cx="50"
+                cy="20"
+                rx="20"
+                ry="5"
+                fill="none"
+                stroke="#e0e0e0"
+                strokeWidth="2"
+              />
+              
+              {/* Water top - only show if there's water */}
+              {percentage > 0 && (
+                <ellipse
+                  cx="50"
+                  cy="80"
+                  rx="20"
+                  ry="5"
+                  fill="#73b5fd"
+                  transform={`translate(0, ${-60 * (percentage / 100)})`}
+                />
+              )}
+            </svg>
             <div className="absolute inset-0 flex items-center justify-center text-mindboost-dark font-bold text-xl">
               {percentage}%
             </div>
@@ -178,6 +418,11 @@ const WaterTracker = () => {
             <p className="text-sm text-gray-500 mt-1">
               {getMotivationalMessage()}
             </p>
+            {remindersEnabled && isActiveHour() && (
+              <p className="text-xs text-blue-500 mt-1">
+                Remember to drink ~{hourlyTarget}ml this hour
+              </p>
+            )}
           </div>
         </div>
         
@@ -211,6 +456,40 @@ const WaterTracker = () => {
             <Plus className="w-5 h-5 mr-2" />
             Add Water
           </button>
+        </div>
+        
+        {/* Today's water log */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <h3 className="font-semibold mb-2">Today's Water Intake</h3>
+          <div className="space-y-2">
+            {waterLogs
+              .filter(log => {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                return new Date(log.timestamp).getTime() >= today.getTime();
+              })
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .map((log, index) => (
+                <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <div className="flex items-center">
+                    <Droplet className="w-4 h-4 mr-2 text-blue-400" />
+                    <span className="text-sm">{log.amount} ml</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </span>
+                </div>
+              ))
+            }
+            
+            {waterLogs.filter(log => {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              return new Date(log.timestamp).getTime() >= today.getTime();
+            }).length === 0 && (
+              <p className="text-sm text-gray-500 py-2">No water logged today yet</p>
+            )}
+          </div>
         </div>
         
         {/* Benefits section */}

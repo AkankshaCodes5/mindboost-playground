@@ -16,7 +16,8 @@ const Dashboard = () => {
     getWaterPercentage, 
     getMeditationMinutesToday,
     getGameScoresByType,
-    getDailyProgressSummary
+    getDailyProgressSummary,
+    waterSettings
   } = useProgress();
 
   // Get game scores count for today using the daily progress summary
@@ -32,6 +33,31 @@ const Dashboard = () => {
 
   // Get daily progress summary directly
   const dailyProgress = getDailyProgressSummary();
+
+  // Check if currently in active hours for water reminders
+  const isActiveHour = () => {
+    if (!waterSettings) return false;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    const [wakeHours, wakeMinutes] = waterSettings.wakeUpTime.split(':').map(Number);
+    const [sleepHours, sleepMinutes] = waterSettings.sleepTime.split(':').map(Number);
+    
+    const wakeTimeMinutes = wakeHours * 60 + wakeMinutes;
+    let sleepTimeMinutes = sleepHours * 60 + sleepMinutes;
+    
+    if (sleepTimeMinutes < wakeTimeMinutes) {
+      sleepTimeMinutes += 24 * 60;
+      if (currentTimeMinutes < wakeTimeMinutes) {
+        return false;
+      }
+    }
+    
+    return currentTimeMinutes >= wakeTimeMinutes && currentTimeMinutes < sleepTimeMinutes;
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -80,10 +106,15 @@ const Dashboard = () => {
                 <span className="text-xs text-gray-500">Meditation</span>
                 <span className="font-semibold text-mindboost-dark">{dailyProgress.meditationMinutes} min</span>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
+              <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center relative">
                 <Droplet className="w-6 h-6 text-mindboost-primary mb-2" />
                 <span className="text-xs text-gray-500">Water</span>
                 <span className="font-semibold text-mindboost-dark">{dailyProgress.waterPercentage}%</span>
+                
+                {/* Water reminder indicator */}
+                {waterSettings?.remindersEnabled && isActiveHour() && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                )}
               </div>
             </div>
           </motion.div>
