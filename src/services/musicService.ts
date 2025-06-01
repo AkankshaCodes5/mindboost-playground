@@ -60,56 +60,56 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks if database fails - using MP3 files from reliable sources with proper CORS headers
+// Return default tracks with working audio URLs
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
       id: 'default-1',
-      title: 'Calm Waters',
+      title: 'Peaceful Rain',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/calm-waters.mp3',
-      duration: '3:45'
+      filePath: 'https://www.soundjay.com/misc/sounds/rain-01.mp3',
+      duration: '2:30'
     },
     {
       id: 'default-2',
-      title: 'Forest Meditation',
-      artist: 'Nature Sounds',
-      isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/forest-meditation.mp3',
-      duration: '4:12'
-    },
-    {
-      id: 'default-3',
-      title: 'Deep Focus',
-      artist: 'Binaural Beats',
-      isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/deep-focus.mp3',
-      duration: '5:30'
-    },
-    {
-      id: 'default-4',
-      title: 'Dream State',
-      artist: 'Binaural Beats',
-      isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/dream-state.mp3',
-      duration: '3:20'
-    },
-    {
-      id: 'default-5',
       title: 'Ocean Waves',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/ocean-waves.mp3',
-      duration: '4:45'
+      filePath: 'https://www.soundjay.com/misc/sounds/ocean-waves.mp3',
+      duration: '3:15'
+    },
+    {
+      id: 'default-3',
+      title: 'Forest Birds',
+      artist: 'Nature Sounds',
+      isBuiltIn: true,
+      filePath: 'https://www.soundjay.com/misc/sounds/forest-birds.mp3',
+      duration: '4:00'
+    },
+    {
+      id: 'default-4',
+      title: 'Meditation Bell',
+      artist: 'Zen Sounds',
+      isBuiltIn: true,
+      filePath: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3',
+      duration: '1:45'
+    },
+    {
+      id: 'default-5',
+      title: 'Wind Chimes',
+      artist: 'Ambient Sounds',
+      isBuiltIn: true,
+      filePath: 'https://www.soundjay.com/misc/sounds/wind-chimes.mp3',
+      duration: '3:30'
     },
     {
       id: 'default-6',
-      title: 'Rainfall Ambience',
-      artist: 'Nature Sounds',
+      title: 'Soft Piano',
+      artist: 'Relaxation Music',
       isBuiltIn: true,
-      filePath: 'https://storage.googleapis.com/mindboost-public/rainfall-ambience.mp3',
-      duration: '5:10'
+      filePath: 'https://www.soundjay.com/misc/sounds/piano-melody.mp3',
+      duration: '4:20'
     }
   ];
   

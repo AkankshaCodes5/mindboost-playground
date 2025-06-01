@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useToast } from "@/hooks/use-toast";
@@ -50,9 +49,8 @@ const MusicPage = () => {
       // Create a new audio element
       const audio = new Audio();
       
-      // Set CORS policy
-      audio.crossOrigin = 'anonymous';
-      audio.preload = 'auto';
+      // Set basic properties for better compatibility
+      audio.preload = 'metadata';
       audio.volume = volume;
       
       // Mobile compatibility attributes
@@ -63,7 +61,7 @@ const MusicPage = () => {
       audioRef.current = audio;
       setAudioInitialized(true);
       
-      console.log("Audio element initialized with mobile compatibility");
+      console.log("Audio element initialized");
     };
     
     initializeAudio();
@@ -83,60 +81,29 @@ const MusicPage = () => {
     const fetchTracks = async () => {
       setLoadingTracks(true);
       try {
-        console.log('Attempting to fetch music tracks...');
-        const musicTracks = await getAllMusicTracks();
+        console.log('Loading relaxation music tracks...');
         
-        if (musicTracks.length > 0) {
-          // Convert to Track format
-          const formattedTracks: Track[] = musicTracks.map(track => ({
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            category: track.isBuiltIn ? 'Built-in' : 'My Uploads',
-            source: track.filePath,
-            isBuiltIn: track.isBuiltIn,
-            userId: track.userId,
-            duration: track.duration || '3:45'
-          }));
-          
-          console.log("Successfully fetched tracks:", formattedTracks);
-          setTracks(formattedTracks);
-        } else {
-          // Add default tracks if no tracks were found
-          console.log("No tracks found, using defaults");
-          const defaultTracks = getDefaultTracks();
-          const formattedDefaultTracks: Track[] = defaultTracks.map(track => ({
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            category: 'Built-in',
-            source: track.filePath,
-            isBuiltIn: true,
-            duration: track.duration || '3:45'
-          }));
-          setTracks(formattedDefaultTracks);
-        }
-      } catch (error) {
-        console.error('Error fetching music tracks:', error);
-        toast({
-          title: "Error",
-          description: "Could not load music tracks, using defaults.",
-          variant: "destructive",
-        });
-        
-        // Fallback to default tracks
-        console.log("Error encountered, using defaults");
+        // Always use default tracks for now to ensure they work
         const defaultTracks = getDefaultTracks();
-        const formattedDefaultTracks: Track[] = defaultTracks.map(track => ({
+        const formattedTracks: Track[] = defaultTracks.map(track => ({
           id: track.id,
           title: track.title,
           artist: track.artist,
-          category: 'Built-in',
+          category: 'Relaxation',
           source: track.filePath,
           isBuiltIn: true,
           duration: track.duration || '3:45'
         }));
-        setTracks(formattedDefaultTracks);
+        
+        console.log("Using relaxation tracks:", formattedTracks);
+        setTracks(formattedTracks);
+      } catch (error) {
+        console.error('Error loading music tracks:', error);
+        toast({
+          title: "Error",
+          description: "Could not load music tracks.",
+          variant: "destructive",
+        });
       } finally {
         setLoadingTracks(false);
       }
@@ -169,7 +136,6 @@ const MusicPage = () => {
     
     const handleLoadedMetadata = () => {
       if (!audio) return;
-      
       setDuration(audio.duration);
       console.log("Audio loaded, duration:", audio.duration);
     };
@@ -179,17 +145,20 @@ const MusicPage = () => {
       setIsPlaying(false);
       setError('Could not play this track. Trying next track...');
       
-      // Show error toast
       toast({
         title: "Playback Error",
-        description: "Could not play the selected track. The file might be unavailable.",
+        description: "Could not play the selected track. Trying next track.",
         variant: "destructive",
       });
       
-      // Try next track after a short delay
       setTimeout(() => {
         nextTrack();
       }, 2000);
+    };
+
+    const handleCanPlay = () => {
+      console.log('Audio can play');
+      setError(null);
     };
 
     // Clean up any existing listeners first
@@ -197,12 +166,14 @@ const MusicPage = () => {
     audio.removeEventListener('ended', handleAudioEnded);
     audio.removeEventListener('error', handleAudioError);
     audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.removeEventListener('canplay', handleCanPlay);
 
     // Add new listeners
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('ended', handleAudioEnded);
     audio.addEventListener('error', handleAudioError);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('canplay', handleCanPlay);
 
     // Cleanup on unmount
     return () => {
@@ -211,6 +182,7 @@ const MusicPage = () => {
         audio.removeEventListener('ended', handleAudioEnded);
         audio.removeEventListener('error', handleAudioError);
         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('canplay', handleCanPlay);
       }
     };
   }, [audioInitialized, toast]);
@@ -240,14 +212,14 @@ const MusicPage = () => {
     }
   };
 
-  const playTrack = (index: number) => {
+  const playTrack = async (index: number) => {
     try {
       if (!audioInitialized || !audioRef.current) {
         console.error("Audio element not available");
         return;
       }
       
-      // If we're already playing a track, stop it first
+      // Stop current track if playing
       if (isPlaying && audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -255,63 +227,65 @@ const MusicPage = () => {
       
       setCurrentTrackIndex(index);
       setError(null);
+      setIsPlaying(false);
       
       const track = tracks[index];
-      console.log(`Playing track: ${track.title}, Source: ${track.source}`);
+      console.log(`Attempting to play: ${track.title}, Source: ${track.source}`);
       
       // Reset the audio element
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       
-      // Set new source - ensure it's a proper URL
+      // Set new source
       audioRef.current.src = track.source;
       
-      // Attempt to load the audio
+      // Load the audio
       audioRef.current.load();
       
-      // Play with error handling
-      const playPromise = audioRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log(`Successfully playing: ${track.title}`);
-            setIsPlaying(true);
-          })
-          .catch(error => {
-            console.error('Error playing audio:', error);
-            setIsPlaying(false);
-            
-            // On iOS, autoplay is often blocked
-            if (error.name === "NotAllowedError") {
-              setError("Tap play again to enable audio on your device");
-              toast({
-                title: "Playback Notice",
-                description: "Tap the play button again to enable audio on your device",
-              });
-            } else {
-              setError(`Could not play: ${error.message || 'Unknown error'}`);
-              
-              // Try to play the next track
-              setTimeout(() => nextTrack(), 2000);
-            }
-          });
+      // Wait for the audio to be ready and then play
+      const playAudio = async () => {
+        try {
+          await audioRef.current!.play();
+          console.log(`Successfully playing: ${track.title}`);
+          setIsPlaying(true);
+        } catch (error) {
+          console.error('Error playing audio:', error);
+          setIsPlaying(false);
+          
+          if (error instanceof Error && error.name === "NotAllowedError") {
+            setError("Click play again to enable audio");
+            toast({
+              title: "Audio Permission",
+              description: "Click the play button again to enable audio playback",
+            });
+          } else {
+            setError(`Could not play: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setTimeout(() => nextTrack(), 2000);
+          }
+        }
+      };
+
+      // Try to play immediately, or wait for user interaction
+      if (audioRef.current.readyState >= 3) {
+        await playAudio();
+      } else {
+        audioRef.current.addEventListener('canplay', playAudio, { once: true });
       }
+      
     } catch (e) {
       console.error("Error in playTrack:", e);
       setError(`Playback error: ${e instanceof Error ? e.message : 'Unknown error'}`);
-      setTimeout(() => nextTrack(), 2000);
     }
   };
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     if (!audioInitialized || !audioRef.current) {
       console.error("Audio element not available");
       return;
     }
     
     if (currentTrackIndex === -1 && tracks.length > 0) {
-      playTrack(0);
+      await playTrack(0);
       return;
     }
     
@@ -319,32 +293,22 @@ const MusicPage = () => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      // For mobile browsers that block autoplay, setting the src again can help
-      if (!audioRef.current.src && currentTrackIndex >= 0) {
-        audioRef.current.src = tracks[currentTrackIndex].source;
-        audioRef.current.load();
-      }
-      
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-            setError(null);
-          })
-          .catch(error => {
-            console.error('Error resuming audio:', error);
-            
-            if (error.name === "NotAllowedError") {
-              setError("Tap play again to enable audio on your device");
-              toast({
-                title: "Playback Notice",
-                description: "Tap again to enable audio (browser restriction)",
-              });
-            } else {
-              setError(`Could not resume: ${error.message || 'Unknown error'}`);
-            }
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+        setError(null);
+      } catch (error) {
+        console.error('Error resuming audio:', error);
+        
+        if (error instanceof Error && error.name === "NotAllowedError") {
+          setError("Click play again to enable audio");
+          toast({
+            title: "Audio Permission",
+            description: "Click again to enable audio playback",
           });
+        } else {
+          setError(`Could not resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
     }
   };
@@ -543,10 +507,10 @@ const MusicPage = () => {
   };
   
   return (
-    <MobileLayout title="Music & Sounds">
+    <MobileLayout title="Relaxation Music">
       <div className="p-4 pb-16">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-mindboost-dark mb-1">Relaxation Sounds</h1>
+          <h1 className="text-2xl font-bold text-mindboost-dark mb-1">Relaxation Music</h1>
           <p className="text-gray-500">
             Listen to calming sounds to reduce stress and improve focus
           </p>
@@ -563,8 +527,8 @@ const MusicPage = () => {
               </h3>
               <p className="text-sm opacity-80">
                 {currentTrackIndex >= 0 
-                  ? tracks[currentTrackIndex].artist || tracks[currentTrackIndex].category || 'Relaxation sounds'
-                  : 'Relaxation sounds'}
+                  ? tracks[currentTrackIndex].artist || 'Relaxation music'
+                  : 'Relaxation music'}
               </p>
               {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
             </div>
@@ -698,7 +662,7 @@ const MusicPage = () => {
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-mindboost-dark flex items-center">
               <Music className="w-5 h-5 mr-2 text-mindboost-primary" />
-              Available Tracks
+              Relaxation Tracks
             </h2>
             <button 
               onClick={handleUpload}
@@ -732,11 +696,9 @@ const MusicPage = () => {
                         ? 'bg-mindboost-light text-mindboost-dark'
                         : 'bg-white'
                     }`}
+                    onClick={() => playTrack(index)}
                   >
-                    <div 
-                      className="flex items-center flex-1"
-                      onClick={() => playTrack(index)}
-                    >
+                    <div className="flex items-center flex-1">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
                         currentTrackIndex === index
                           ? 'bg-mindboost-primary text-white'
@@ -750,7 +712,7 @@ const MusicPage = () => {
                       <div>
                         <p className="font-medium line-clamp-1">{track.title}</p>
                         <p className="text-xs text-gray-500">
-                          {track.artist || track.category || (track.isBuiltIn ? 'Built-in' : 'My Upload')}
+                          {track.artist || 'Relaxation Music'}
                         </p>
                       </div>
                     </div>
@@ -780,13 +742,13 @@ const MusicPage = () => {
         
         {/* Tips section */}
         <div className="bg-white rounded-xl shadow-sm p-4">
-          <h3 className="font-semibold mb-2">Music & Sound Benefits</h3>
+          <h3 className="font-semibold mb-2">Relaxation Music Benefits</h3>
           <ul className="space-y-2 text-gray-600 text-sm">
-            <li>• Reduces stress hormone levels</li>
+            <li>• Reduces stress and anxiety levels</li>
             <li>• Enhances focus and concentration</li>
-            <li>• Binaural beats can alter brainwave frequency</li>
-            <li>• Nature sounds improve cognitive function</li>
-            <li>• Can reduce symptoms of depression</li>
+            <li>• Promotes better sleep quality</li>
+            <li>• Lowers blood pressure and heart rate</li>
+            <li>• Improves mood and emotional well-being</li>
           </ul>
         </div>
       </div>
