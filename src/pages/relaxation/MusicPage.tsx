@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +53,7 @@ const MusicPage = () => {
       // Set basic properties for better compatibility
       audio.preload = 'metadata';
       audio.volume = volume;
+      audio.crossOrigin = 'anonymous';
       
       // Mobile compatibility attributes
       audio.setAttribute('playsinline', 'true');
@@ -83,7 +85,6 @@ const MusicPage = () => {
       try {
         console.log('Loading relaxation music tracks...');
         
-        // Always use default tracks for now to ensure they work
         const defaultTracks = getDefaultTracks();
         const formattedTracks: Track[] = defaultTracks.map(track => ({
           id: track.id,
@@ -245,36 +246,49 @@ const MusicPage = () => {
       // Wait for the audio to be ready and then play
       const playAudio = async () => {
         try {
-          await audioRef.current!.play();
+          if (!audioRef.current) return;
+          
+          // Add a small delay to ensure audio is ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          await audioRef.current.play();
           console.log(`Successfully playing: ${track.title}`);
           setIsPlaying(true);
+          setError(null);
         } catch (error) {
           console.error('Error playing audio:', error);
           setIsPlaying(false);
           
-          if (error instanceof Error && error.name === "NotAllowedError") {
-            setError("Click play again to enable audio");
-            toast({
-              title: "Audio Permission",
-              description: "Click the play button again to enable audio playback",
-            });
-          } else {
-            setError(`Could not play: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            setTimeout(() => nextTrack(), 2000);
+          if (error instanceof Error) {
+            if (error.name === "NotAllowedError") {
+              setError("Click play again to enable audio");
+              toast({
+                title: "Audio Permission",
+                description: "Click the play button again to enable audio playback",
+              });
+            } else if (error.name === "NotSupportedError") {
+              setError("This audio format is not supported");
+              toast({
+                title: "Unsupported Format",
+                description: "This audio format is not supported by your browser",
+                variant: "destructive",
+              });
+              setTimeout(() => nextTrack(), 2000);
+            } else {
+              setError(`Playback error: ${error.message}`);
+              setTimeout(() => nextTrack(), 2000);
+            }
           }
         }
       };
 
-      // Try to play immediately, or wait for user interaction
-      if (audioRef.current.readyState >= 3) {
-        await playAudio();
-      } else {
-        audioRef.current.addEventListener('canplay', playAudio, { once: true });
-      }
+      // Try to play immediately
+      await playAudio();
       
     } catch (e) {
       console.error("Error in playTrack:", e);
-      setError(`Playback error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      setError(`Track error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      setTimeout(() => nextTrack(), 2000);
     }
   };
 
