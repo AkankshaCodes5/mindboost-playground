@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MobileLayout from '../../components/MobileLayout';
 import { useToast } from "@/hooks/use-toast";
@@ -144,11 +143,11 @@ const MusicPage = () => {
     const handleAudioError = (e: Event) => {
       console.error('Audio playback error:', e);
       setIsPlaying(false);
-      setError('Could not play this track. Trying next track...');
+      setError('Audio format not supported. Trying next track...');
       
       toast({
         title: "Playback Error",
-        description: "Could not play the selected track. Trying next track.",
+        description: "Audio format not supported. Trying next track.",
         variant: "destructive",
       });
       
@@ -249,7 +248,7 @@ const MusicPage = () => {
           if (!audioRef.current) return;
           
           // Add a small delay to ensure audio is ready
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
           
           await audioRef.current.play();
           console.log(`Successfully playing: ${track.title}`);
@@ -554,7 +553,13 @@ const MusicPage = () => {
                 max="1"
                 step="0.01"
                 value={volume}
-                onChange={handleVolumeChange}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  setVolume(value);
+                  if (audioRef.current) {
+                    audioRef.current.volume = value;
+                  }
+                }}
                 className="w-20"
                 aria-label="Volume control"
               />
@@ -570,7 +575,17 @@ const MusicPage = () => {
           {/* Progress bar */}
           <div 
             className="w-full bg-white bg-opacity-20 h-2 rounded-full mb-4 cursor-pointer"
-            onClick={handleProgressClick}
+            onClick={(e) => {
+              if (!audioRef.current || isNaN(audioRef.current.duration)) return;
+              
+              const progressBar = e.currentTarget;
+              const rect = progressBar.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              const newTime = audioRef.current.duration * pos;
+              
+              audioRef.current.currentTime = newTime;
+              setCurrentTime(newTime);
+            }}
             aria-label="Track progress"
           >
             <div 
@@ -584,21 +599,62 @@ const MusicPage = () => {
           {/* Controls */}
           <div className="flex justify-center items-center space-x-8">
             <button 
-              onClick={prevTrack} 
+              onClick={() => {
+                if (tracks.length === 0) return;
+                const newIndex = currentTrackIndex <= 0 ? tracks.length - 1 : currentTrackIndex - 1;
+                playTrack(newIndex);
+              }} 
               className="focus:outline-none hover:opacity-80 transition-opacity"
               aria-label="Previous track"
             >
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
-              onClick={togglePlayPause}
+              onClick={async () => {
+                if (!audioInitialized || !audioRef.current) {
+                  console.error("Audio element not available");
+                  return;
+                }
+                
+                if (currentTrackIndex === -1 && tracks.length > 0) {
+                  await playTrack(0);
+                  return;
+                }
+                
+                if (isPlaying) {
+                  audioRef.current.pause();
+                  setIsPlaying(false);
+                } else {
+                  try {
+                    await audioRef.current.play();
+                    setIsPlaying(true);
+                    setError(null);
+                  } catch (error) {
+                    console.error('Error resuming audio:', error);
+                    
+                    if (error instanceof Error && error.name === "NotAllowedError") {
+                      setError("Click play again to enable audio");
+                      toast({
+                        title: "Audio Permission",
+                        description: "Click again to enable audio playback",
+                      });
+                    } else {
+                      setError(`Could not resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                  }
+                }
+              }}
               className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors shadow-md"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
             </button>
             <button 
-              onClick={nextTrack} 
+              onClick={() => {
+                if (tracks.length === 0) return;
+                const newIndex = currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
+                playTrack(newIndex);
+              }} 
               className="focus:outline-none hover:opacity-80 transition-opacity"
               aria-label="Next track"
             >
@@ -607,7 +663,28 @@ const MusicPage = () => {
           </div>
           
           {/* Sound wave animation when playing */}
-          {renderWaveform()}
+          {isPlaying && (
+            <div className="flex justify-center items-end h-6 gap-[2px] mt-3">
+              {[...Array(16)].map((_, i) => {
+                const height = Math.random() * 16 + 4;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ height: 4 }}
+                    animate={{ 
+                      height: [4, height, 4],
+                      transition: { 
+                        repeat: Infinity, 
+                        duration: 1 + Math.random() * 0.5,
+                        repeatType: 'reverse'
+                      }
+                    }}
+                    className="bg-white w-1 rounded-full"
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
         
         {/* Upload form */}

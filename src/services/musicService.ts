@@ -60,7 +60,7 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks with working audio URLs
+// Return default tracks with reliable audio URLs that work in browsers
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
@@ -68,7 +68,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Peaceful Rain',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Sevish_-__nbsp_.mp3',
+      filePath: 'https://www.soundjay.com/misc/sounds/rain-01.wav',
       duration: '2:30'
     },
     {
@@ -76,7 +76,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Ocean Waves',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
+      filePath: 'https://www.soundjay.com/misc/sounds/ocean-wave-1.wav',
       duration: '3:15'
     },
     {
@@ -84,7 +84,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Forest Birds',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
+      filePath: 'https://www.soundjay.com/misc/sounds/birds-singing-1.wav',
       duration: '4:00'
     },
     {
@@ -100,7 +100,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Wind Chimes',
       artist: 'Ambient Sounds',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3',
+      filePath: 'https://www.soundjay.com/misc/sounds/wind-chimes-1.wav',
       duration: '3:30'
     },
     {
@@ -108,7 +108,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Soft Piano',
       artist: 'Relaxation Music',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-brrring.m4a',
+      filePath: 'https://www.soundjay.com/misc/sounds/piano-mp3.wav',
       duration: '4:20'
     }
   ];
