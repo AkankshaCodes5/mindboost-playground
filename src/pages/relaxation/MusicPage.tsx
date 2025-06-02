@@ -40,34 +40,25 @@ const MusicPage = () => {
   // Create and configure audio element on component mount
   useEffect(() => {
     const initializeAudio = () => {
-      // Clean up any existing audio element
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
       }
       
-      // Create a new audio element
       const audio = new Audio();
-      
-      // Set basic properties for better compatibility
       audio.preload = 'metadata';
       audio.volume = volume;
       audio.crossOrigin = 'anonymous';
-      
-      // Mobile compatibility attributes
       audio.setAttribute('playsinline', 'true');
       audio.setAttribute('webkit-playsinline', 'true');
       
-      // Set audio element reference
       audioRef.current = audio;
       setAudioInitialized(true);
-      
       console.log("Audio element initialized");
     };
     
     initializeAudio();
     
-    // Cleanup on unmount
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -143,17 +134,21 @@ const MusicPage = () => {
     const handleAudioError = (e: Event) => {
       console.error('Audio playback error:', e);
       setIsPlaying(false);
-      setError('Audio format not supported. Trying next track...');
       
+      // Try to skip to next track if current one fails
       toast({
         title: "Playback Error",
-        description: "Audio format not supported. Trying next track.",
+        description: "This track cannot be played. Skipping to next track.",
         variant: "destructive",
       });
       
       setTimeout(() => {
-        nextTrack();
-      }, 2000);
+        if (tracks.length > 1) {
+          nextTrack();
+        } else {
+          setError('No playable tracks available');
+        }
+      }, 1000);
     };
 
     const handleCanPlay = () => {
@@ -161,12 +156,18 @@ const MusicPage = () => {
       setError(null);
     };
 
-    // Clean up any existing listeners first
+    const handleLoadStart = () => {
+      console.log('Audio load started');
+      setError(null);
+    };
+
+    // Clean up existing listeners
     audio.removeEventListener('timeupdate', updateProgress);
     audio.removeEventListener('ended', handleAudioEnded);
     audio.removeEventListener('error', handleAudioError);
     audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     audio.removeEventListener('canplay', handleCanPlay);
+    audio.removeEventListener('loadstart', handleLoadStart);
 
     // Add new listeners
     audio.addEventListener('timeupdate', updateProgress);
@@ -174,8 +175,8 @@ const MusicPage = () => {
     audio.addEventListener('error', handleAudioError);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('loadstart', handleLoadStart);
 
-    // Cleanup on unmount
     return () => {
       if (audio) {
         audio.removeEventListener('timeupdate', updateProgress);
@@ -183,9 +184,10 @@ const MusicPage = () => {
         audio.removeEventListener('error', handleAudioError);
         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
         audio.removeEventListener('canplay', handleCanPlay);
+        audio.removeEventListener('loadstart', handleLoadStart);
       }
     };
-  }, [audioInitialized, toast]);
+  }, [audioInitialized, toast, tracks.length]);
 
   // Update audio volume when volume state changes
   useEffect(() => {
@@ -219,7 +221,6 @@ const MusicPage = () => {
         return;
       }
       
-      // Stop current track if playing
       if (isPlaying && audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -232,23 +233,16 @@ const MusicPage = () => {
       const track = tracks[index];
       console.log(`Attempting to play: ${track.title}, Source: ${track.source}`);
       
-      // Reset the audio element
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      
-      // Set new source
       audioRef.current.src = track.source;
-      
-      // Load the audio
       audioRef.current.load();
       
-      // Wait for the audio to be ready and then play
       const playAudio = async () => {
         try {
           if (!audioRef.current) return;
           
-          // Add a small delay to ensure audio is ready
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 300));
           
           await audioRef.current.play();
           console.log(`Successfully playing: ${track.title}`);
@@ -269,25 +263,24 @@ const MusicPage = () => {
               setError("This audio format is not supported");
               toast({
                 title: "Unsupported Format",
-                description: "This audio format is not supported by your browser",
+                description: "This audio format is not supported. Trying next track.",
                 variant: "destructive",
               });
-              setTimeout(() => nextTrack(), 2000);
+              setTimeout(() => nextTrack(), 1500);
             } else {
               setError(`Playback error: ${error.message}`);
-              setTimeout(() => nextTrack(), 2000);
+              setTimeout(() => nextTrack(), 1500);
             }
           }
         }
       };
 
-      // Try to play immediately
       await playAudio();
       
     } catch (e) {
       console.error("Error in playTrack:", e);
       setError(`Track error: ${e instanceof Error ? e.message : 'Unknown error'}`);
-      setTimeout(() => nextTrack(), 2000);
+      setTimeout(() => nextTrack(), 1500);
     }
   };
 
@@ -599,62 +592,21 @@ const MusicPage = () => {
           {/* Controls */}
           <div className="flex justify-center items-center space-x-8">
             <button 
-              onClick={() => {
-                if (tracks.length === 0) return;
-                const newIndex = currentTrackIndex <= 0 ? tracks.length - 1 : currentTrackIndex - 1;
-                playTrack(newIndex);
-              }} 
+              onClick={prevTrack} 
               className="focus:outline-none hover:opacity-80 transition-opacity"
               aria-label="Previous track"
             >
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
-              onClick={async () => {
-                if (!audioInitialized || !audioRef.current) {
-                  console.error("Audio element not available");
-                  return;
-                }
-                
-                if (currentTrackIndex === -1 && tracks.length > 0) {
-                  await playTrack(0);
-                  return;
-                }
-                
-                if (isPlaying) {
-                  audioRef.current.pause();
-                  setIsPlaying(false);
-                } else {
-                  try {
-                    await audioRef.current.play();
-                    setIsPlaying(true);
-                    setError(null);
-                  } catch (error) {
-                    console.error('Error resuming audio:', error);
-                    
-                    if (error instanceof Error && error.name === "NotAllowedError") {
-                      setError("Click play again to enable audio");
-                      toast({
-                        title: "Audio Permission",
-                        description: "Click again to enable audio playback",
-                      });
-                    } else {
-                      setError(`Could not resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                    }
-                  }
-                }
-              }}
+              onClick={togglePlayPause}
               className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors shadow-md"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
             </button>
             <button 
-              onClick={() => {
-                if (tracks.length === 0) return;
-                const newIndex = currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
-                playTrack(newIndex);
-              }} 
+              onClick={nextTrack} 
               className="focus:outline-none hover:opacity-80 transition-opacity"
               aria-label="Next track"
             >

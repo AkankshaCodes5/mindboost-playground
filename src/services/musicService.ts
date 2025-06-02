@@ -9,7 +9,7 @@ export type MusicTrack = {
   filePath: string;
   userId?: string;
   uploadTime?: string;
-  duration?: string; // Optional duration property
+  duration?: string;
 };
 
 // Enhanced type guard to ensure database results are valid
@@ -27,7 +27,7 @@ const convertDbTrackToClientFormat = (track: Record<string, any>): MusicTrack =>
     filePath: track.file_path || '',
     userId: track.user_id,
     uploadTime: track.upload_time,
-    duration: track.duration || '3:45' // Default duration
+    duration: track.duration || '3:45'
   };
 };
 
@@ -60,7 +60,7 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks with reliable audio URLs that work in browsers
+// Return default tracks with working audio URLs
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
@@ -68,7 +68,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Peaceful Rain',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/rain-01.wav',
+      filePath: 'https://www.kozco.com/tech/piano2.wav',
       duration: '2:30'
     },
     {
@@ -76,7 +76,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Ocean Waves',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/ocean-wave-1.wav',
+      filePath: 'https://file-examples.com/storage/fe68c42b8fc9315f4e9eace/2017/11/file_example_WAV_1MG.wav',
       duration: '3:15'
     },
     {
@@ -84,7 +84,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Forest Birds',
       artist: 'Nature Sounds',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/birds-singing-1.wav',
+      filePath: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3',
       duration: '4:00'
     },
     {
@@ -100,7 +100,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Wind Chimes',
       artist: 'Ambient Sounds',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/wind-chimes-1.wav',
+      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3',
       duration: '3:30'
     },
     {
@@ -108,7 +108,7 @@ export const getDefaultTracks = (): MusicTrack[] => {
       title: 'Soft Piano',
       artist: 'Relaxation Music',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/piano-mp3.wav',
+      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-button.m4a',
       duration: '4:20'
     }
   ];
