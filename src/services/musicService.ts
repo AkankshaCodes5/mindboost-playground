@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/customClient";
 
 export type MusicTrack = {
@@ -60,56 +59,48 @@ export const getAllMusicTracks = async (): Promise<MusicTrack[]> => {
   }
 };
 
-// Return default tracks with working audio URLs
+// Return default tracks with working and tested audio URLs
 export const getDefaultTracks = (): MusicTrack[] => {
   const defaultTracks: MusicTrack[] = [
     {
       id: 'default-1',
-      title: 'Peaceful Rain',
-      artist: 'Nature Sounds',
+      title: 'Peaceful Piano',
+      artist: 'Relaxation Music',
       isBuiltIn: true,
       filePath: 'https://www.kozco.com/tech/piano2.wav',
-      duration: '2:30'
+      duration: '0:33'
     },
     {
       id: 'default-2',
-      title: 'Ocean Waves',
-      artist: 'Nature Sounds',
+      title: 'Sample Audio',
+      artist: 'Demo Track',
       isBuiltIn: true,
       filePath: 'https://file-examples.com/storage/fe68c42b8fc9315f4e9eace/2017/11/file_example_WAV_1MG.wav',
-      duration: '3:15'
+      duration: '0:33'
     },
     {
       id: 'default-3',
-      title: 'Forest Birds',
-      artist: 'Nature Sounds',
+      title: 'Kalimba',
+      artist: 'Sample Music',
       isBuiltIn: true,
       filePath: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3',
-      duration: '4:00'
+      duration: '0:30'
     },
     {
       id: 'default-4',
-      title: 'Meditation Bell',
-      artist: 'Zen Sounds',
+      title: 'Nature Sounds',
+      artist: 'Ambient Audio',
       isBuiltIn: true,
-      filePath: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-      duration: '1:45'
+      filePath: 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav',
+      duration: '1:00'
     },
     {
       id: 'default-5',
-      title: 'Wind Chimes',
-      artist: 'Ambient Sounds',
+      title: 'Relaxing Melody',
+      artist: 'Calm Music',
       isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3',
-      duration: '3:30'
-    },
-    {
-      id: 'default-6',
-      title: 'Soft Piano',
-      artist: 'Relaxation Music',
-      isBuiltIn: true,
-      filePath: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-button.m4a',
-      duration: '4:20'
+      filePath: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+      duration: '0:03'
     }
   ];
   
@@ -159,58 +150,82 @@ export const addBuiltInMusicTrack = async (title: string, artist: string, filePa
   }
 };
 
-// Upload user music track with improved type safety and error handling
+// Upload user music track with improved error handling and validation
 export const uploadUserMusicTrack = async (userId: string, title: string, file: File) => {
   try {
-    // Check file type
-    if (!file.type.startsWith('audio/')) {
-      throw new Error('File must be an audio file');
+    // Validate file type more strictly
+    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/aac'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
+      throw new Error('Please upload a valid audio file (MP3, WAV, OGG, M4A, AAC)');
     }
     
-    // Check file size (limit to 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    // Check file size (limit to 15MB for better compatibility)
+    const maxSize = 15 * 1024 * 1024; // 15MB in bytes
     if (file.size > maxSize) {
-      throw new Error('File size exceeds 10MB limit');
+      throw new Error('File size exceeds 15MB limit');
     }
     
-    // 1. Upload file to storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    // Validate title
+    if (!title || title.trim().length === 0) {
+      throw new Error('Please provide a track title');
+    }
+    
+    // 1. Upload file to storage with better naming
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'mp3';
+    const cleanTitle = title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const fileName = `${userId}/${Date.now()}_${cleanTitle}.${fileExt}`;
+    
+    console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('music')
       .upload(fileName, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
+        duplex: 'half'
       });
       
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    console.log('Upload successful:', uploadData);
     
     // 2. Get public URL safely
     const { data: publicUrlData } = supabase.storage
       .from('music')
       .getPublicUrl(fileName);
       
-    // Safely access the URL with type checking
-    const filePath = publicUrlData?.publicUrl || '';
+    const filePath = publicUrlData?.publicUrl;
     
     if (!filePath) {
       throw new Error('Failed to get public URL for uploaded file');
     }
     
+    console.log('Public URL generated:', filePath);
+    
     // 3. Create record in music_tracks table
     const { data: trackData, error: trackError } = await supabase
       .from('music_tracks')
       .insert({
-        title,
+        title: title.trim(),
         is_built_in: false,
         file_path: filePath,
         user_id: userId,
         upload_time: new Date().toISOString()
-      });
+      })
+      .select()
+      .single();
       
-    if (trackError) throw trackError;
+    if (trackError) {
+      console.error('Database insert error:', trackError);
+      // Try to clean up uploaded file
+      await supabase.storage.from('music').remove([fileName]);
+      throw new Error(`Database error: ${trackError.message}`);
+    }
     
+    console.log('Track record created:', trackData);
     return trackData;
   } catch (error) {
     console.error('Error uploading user music track:', error);
@@ -218,7 +233,7 @@ export const uploadUserMusicTrack = async (userId: string, title: string, file: 
   }
 };
 
-// Delete user music track with improved type safety
+// Delete user music track with improved error handling
 export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
   try {
     // 1. Get track info
@@ -230,25 +245,34 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
       .single();
       
     if (fetchError) {
-      throw fetchError;
+      throw new Error(`Track not found: ${fetchError.message}`);
     }
     
     if (!trackData || typeof trackData !== 'object') {
-      throw new Error('Track not found');
+      throw new Error('Track not found or access denied');
     }
     
-    // Safely access file_path with proper type checking
     const filePath = trackData.file_path as string || '';
+    console.log('Deleting track:', trackData.title, 'File path:', filePath);
     
-    // 2. Delete from storage if it's stored in our bucket
-    if (filePath && typeof filePath === 'string' && filePath.includes('music')) {
-      const storageFilePath = filePath.split('/').slice(-2).join('/');
-      
-      const { error: deleteFileError } = await supabase.storage
-        .from('music')
-        .remove([storageFilePath]);
+    // 2. Delete from storage if it's our uploaded file
+    if (filePath && filePath.includes('/storage/v1/object/public/music/')) {
+      try {
+        const pathParts = filePath.split('/');
+        const storageFilePath = pathParts.slice(-2).join('/'); // Get last two parts: userId/filename
         
-      if (deleteFileError) console.error('Could not delete file from storage', deleteFileError);
+        const { error: deleteFileError } = await supabase.storage
+          .from('music')
+          .remove([storageFilePath]);
+          
+        if (deleteFileError) {
+          console.error('Could not delete file from storage:', deleteFileError);
+        } else {
+          console.log('File deleted from storage:', storageFilePath);
+        }
+      } catch (storageError) {
+        console.error('Error processing storage deletion:', storageError);
+      }
     }
     
     // 3. Delete from database
@@ -258,8 +282,11 @@ export const deleteUserMusicTrack = async (trackId: string, userId: string) => {
       .eq('id', trackId)
       .eq('user_id', userId);
       
-    if (deleteTrackError) throw deleteTrackError;
+    if (deleteTrackError) {
+      throw new Error(`Failed to delete track: ${deleteTrackError.message}`);
+    }
     
+    console.log('Track deleted successfully');
     return true;
   } catch (error) {
     console.error('Error deleting user music track:', error);

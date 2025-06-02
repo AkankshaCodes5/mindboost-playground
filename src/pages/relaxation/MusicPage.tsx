@@ -31,30 +31,35 @@ const MusicPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loadingTracks, setLoadingTracks] = useState(true);
   const [audioInitialized, setAudioInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Create and configure audio element on component mount
+  // Initialize audio element with better error handling
   useEffect(() => {
     const initializeAudio = () => {
+      // Clean up existing audio
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
+        audioRef.current.load();
       }
       
       const audio = new Audio();
-      audio.preload = 'metadata';
+      audio.preload = 'none'; // Don't preload to avoid errors
       audio.volume = volume;
       audio.crossOrigin = 'anonymous';
+      
+      // Mobile-specific attributes
       audio.setAttribute('playsinline', 'true');
       audio.setAttribute('webkit-playsinline', 'true');
       
       audioRef.current = audio;
       setAudioInitialized(true);
-      console.log("Audio element initialized");
+      console.log("Audio element initialized successfully");
     };
     
     initializeAudio();
@@ -65,15 +70,16 @@ const MusicPage = () => {
         audioRef.current.src = '';
         audioRef.current = null;
       }
+      setAudioInitialized(false);
     };
-  }, []);
+  }, [volume]);
 
-  // Fetch tracks from Supabase with fallback to default tracks
+  // Load tracks on component mount
   useEffect(() => {
     const fetchTracks = async () => {
       setLoadingTracks(true);
       try {
-        console.log('Loading relaxation music tracks...');
+        console.log('Loading music tracks...');
         
         const defaultTracks = getDefaultTracks();
         const formattedTracks: Track[] = defaultTracks.map(track => ({
@@ -86,7 +92,7 @@ const MusicPage = () => {
           duration: track.duration || '3:45'
         }));
         
-        console.log("Using relaxation tracks:", formattedTracks);
+        console.log("Loaded tracks:", formattedTracks);
         setTracks(formattedTracks);
       } catch (error) {
         console.error('Error loading music tracks:', error);
@@ -103,226 +109,236 @@ const MusicPage = () => {
     fetchTracks();
   }, [toast]);
 
-  // Set up audio element event listeners after it's initialized
+  // Set up audio event listeners after initialization
   useEffect(() => {
     if (!audioInitialized || !audioRef.current) return;
     
     const audio = audioRef.current;
 
     const updateProgress = () => {
-      if (!audio) return;
+      if (!audio || !audio.duration || isNaN(audio.duration)) return;
       
-      const audioDuration = audio.duration;
-      const audioCurrentTime = audio.currentTime;
-      
-      if (audioDuration > 0 && !isNaN(audioDuration)) {
-        setProgress((audioCurrentTime / audioDuration) * 100);
-        setCurrentTime(audioCurrentTime);
-      }
+      const progressPercent = (audio.currentTime / audio.duration) * 100;
+      setProgress(progressPercent);
+      setCurrentTime(audio.currentTime);
     };
 
-    const handleAudioEnded = () => {
-      handleTrackEnd();
-    };
-    
     const handleLoadedMetadata = () => {
-      if (!audio) return;
+      if (!audio || isNaN(audio.duration)) return;
       setDuration(audio.duration);
-      console.log("Audio loaded, duration:", audio.duration);
-    };
-
-    const handleAudioError = (e: Event) => {
-      console.error('Audio playback error:', e);
-      setIsPlaying(false);
-      
-      // Try to skip to next track if current one fails
-      toast({
-        title: "Playback Error",
-        description: "This track cannot be played. Skipping to next track.",
-        variant: "destructive",
-      });
-      
-      setTimeout(() => {
-        if (tracks.length > 1) {
-          nextTrack();
-        } else {
-          setError('No playable tracks available');
-        }
-      }, 1000);
+      setIsLoading(false);
+      console.log("Audio metadata loaded, duration:", audio.duration);
     };
 
     const handleCanPlay = () => {
-      console.log('Audio can play');
       setError(null);
+      setIsLoading(false);
+      console.log("Audio can play");
     };
 
     const handleLoadStart = () => {
-      console.log('Audio load started');
+      setIsLoading(true);
       setError(null);
+      console.log("Audio loading started");
     };
 
-    // Clean up existing listeners
+    const handleAudioError = (e: Event) => {
+      const target = e.target as HTMLAudioElement;
+      const errorCode = target.error?.code;
+      let errorMessage = "Audio playback error";
+      
+      switch (errorCode) {
+        case MediaError.MEDIA_ERR_ABORTED:
+          errorMessage = "Audio loading was aborted";
+          break;
+        case MediaError.MEDIA_ERR_NETWORK:
+          errorMessage = "Network error while loading audio";
+          break;
+        case MediaError.MEDIA_ERR_DECODE:
+          errorMessage = "Audio format not supported";
+          break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          errorMessage = "Audio source not supported";
+          break;
+      }
+      
+      console.error('Audio error:', errorMessage, errorCode);
+      setIsPlaying(false);
+      setIsLoading(false);
+      setError(errorMessage);
+      
+      toast({
+        title: "Playback Error",
+        description: `${errorMessage}. Trying next track...`,
+        variant: "destructive",
+      });
+      
+      // Auto-skip to next track after error
+      setTimeout(() => {
+        if (tracks.length > 1) {
+          nextTrack();
+        }
+      }, 2000);
+    };
+
+    const handleAudioEnded = () => {
+      console.log("Audio ended, playing next track");
+      nextTrack();
+    };
+
+    // Remove existing listeners
     audio.removeEventListener('timeupdate', updateProgress);
-    audio.removeEventListener('ended', handleAudioEnded);
-    audio.removeEventListener('error', handleAudioError);
     audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     audio.removeEventListener('canplay', handleCanPlay);
     audio.removeEventListener('loadstart', handleLoadStart);
+    audio.removeEventListener('error', handleAudioError);
+    audio.removeEventListener('ended', handleAudioEnded);
 
     // Add new listeners
     audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', handleAudioEnded);
-    audio.addEventListener('error', handleAudioError);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadstart', handleLoadStart);
+    audio.addEventListener('error', handleAudioError);
+    audio.addEventListener('ended', handleAudioEnded);
 
     return () => {
-      if (audio) {
-        audio.removeEventListener('timeupdate', updateProgress);
-        audio.removeEventListener('ended', handleAudioEnded);
-        audio.removeEventListener('error', handleAudioError);
-        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        audio.removeEventListener('canplay', handleCanPlay);
-        audio.removeEventListener('loadstart', handleLoadStart);
-      }
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('loadstart', handleLoadStart);
+      audio.removeEventListener('error', handleAudioError);
+      audio.removeEventListener('ended', handleAudioEnded);
     };
   }, [audioInitialized, toast, tracks.length]);
 
-  // Update audio volume when volume state changes
+  // Update volume when changed
   useEffect(() => {
-    if (!audioRef.current) return;
-    audioRef.current.volume = volume;
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
   }, [volume]);
 
-  // Format time from seconds to MM:SS
   const formatTime = (time: number): string => {
-    if (isNaN(time)) return "0:00";
+    if (isNaN(time) || time < 0) return "0:00";
     
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
   };
 
-  const handleTrackEnd = () => {
-    if (currentTrackIndex < tracks.length - 1) {
-      setCurrentTrackIndex(prev => prev + 1);
-      playTrack(currentTrackIndex + 1);
-    } else {
-      setCurrentTrackIndex(0);
-      playTrack(0);
-    }
-  };
-
   const playTrack = async (index: number) => {
+    if (!audioInitialized || !audioRef.current || !tracks[index]) {
+      console.error("Cannot play track: audio not initialized or track not found");
+      return;
+    }
+    
     try {
-      if (!audioInitialized || !audioRef.current) {
-        console.error("Audio element not available");
-        return;
-      }
-      
-      if (isPlaying && audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      
-      setCurrentTrackIndex(index);
+      setIsLoading(true);
       setError(null);
-      setIsPlaying(false);
       
       const track = tracks[index];
-      console.log(`Attempting to play: ${track.title}, Source: ${track.source}`);
+      console.log(`Loading track: ${track.title} - ${track.source}`);
       
+      // Stop current playback
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      
+      // Update current track
+      setCurrentTrackIndex(index);
+      
+      // Set new source and load
       audioRef.current.src = track.source;
       audioRef.current.load();
       
-      const playAudio = async () => {
-        try {
-          if (!audioRef.current) return;
-          
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          await audioRef.current.play();
-          console.log(`Successfully playing: ${track.title}`);
-          setIsPlaying(true);
-          setError(null);
-        } catch (error) {
-          console.error('Error playing audio:', error);
-          setIsPlaying(false);
-          
-          if (error instanceof Error) {
-            if (error.name === "NotAllowedError") {
-              setError("Click play again to enable audio");
-              toast({
-                title: "Audio Permission",
-                description: "Click the play button again to enable audio playback",
-              });
-            } else if (error.name === "NotSupportedError") {
-              setError("This audio format is not supported");
-              toast({
-                title: "Unsupported Format",
-                description: "This audio format is not supported. Trying next track.",
-                variant: "destructive",
-              });
-              setTimeout(() => nextTrack(), 1500);
-            } else {
-              setError(`Playback error: ${error.message}`);
-              setTimeout(() => nextTrack(), 1500);
+      // Try to play after a short delay
+      const playPromise = new Promise<void>((resolve, reject) => {
+        const attemptPlay = async () => {
+          try {
+            if (!audioRef.current) {
+              reject(new Error("Audio element not available"));
+              return;
             }
+            
+            await audioRef.current.play();
+            setIsPlaying(true);
+            setIsLoading(false);
+            console.log(`Successfully playing: ${track.title}`);
+            resolve();
+          } catch (error) {
+            console.error('Play attempt failed:', error);
+            setIsPlaying(false);
+            setIsLoading(false);
+            
+            if (error instanceof Error) {
+              if (error.name === "NotAllowedError") {
+                setError("Click play again to enable audio");
+                toast({
+                  title: "Audio Permission",
+                  description: "Click the play button again to enable audio",
+                });
+              } else {
+                setError(`Playback failed: ${error.message}`);
+              }
+            }
+            reject(error);
           }
-        }
-      };
-
-      await playAudio();
+        };
+        
+        // Small delay to ensure audio is ready
+        setTimeout(attemptPlay, 100);
+      });
       
-    } catch (e) {
-      console.error("Error in playTrack:", e);
-      setError(`Track error: ${e instanceof Error ? e.message : 'Unknown error'}`);
-      setTimeout(() => nextTrack(), 1500);
+      await playPromise;
+      
+    } catch (error) {
+      console.error("Error in playTrack:", error);
+      setIsLoading(false);
+      setError("Failed to play track");
+      
+      // Try next track if this one fails
+      setTimeout(() => {
+        if (tracks.length > 1) {
+          nextTrack();
+        }
+      }, 1500);
     }
   };
 
   const togglePlayPause = async () => {
     if (!audioInitialized || !audioRef.current) {
-      console.error("Audio element not available");
+      console.error("Audio not initialized");
       return;
     }
     
+    // If no track selected, play first track
     if (currentTrackIndex === -1 && tracks.length > 0) {
       await playTrack(0);
       return;
     }
     
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      try {
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        console.log("Audio paused");
+      } else {
         await audioRef.current.play();
         setIsPlaying(true);
         setError(null);
-      } catch (error) {
-        console.error('Error resuming audio:', error);
-        
-        if (error instanceof Error && error.name === "NotAllowedError") {
-          setError("Click play again to enable audio");
-          toast({
-            title: "Audio Permission",
-            description: "Click again to enable audio playback",
-          });
-        } else {
-          setError(`Could not resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        console.log("Audio resumed");
+      }
+    } catch (error) {
+      console.error('Toggle play/pause error:', error);
+      if (error instanceof Error && error.name === "NotAllowedError") {
+        setError("Click again to enable audio");
+        toast({
+          title: "Audio Permission",
+          description: "Click again to enable audio playback",
+        });
       }
     }
-  };
-
-  const prevTrack = () => {
-    if (tracks.length === 0) return;
-    const newIndex = currentTrackIndex <= 0 ? tracks.length - 1 : currentTrackIndex - 1;
-    playTrack(newIndex);
   };
 
   const nextTrack = () => {
@@ -331,21 +347,19 @@ const MusicPage = () => {
     playTrack(newIndex);
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setVolume(value);
-    if (audioRef.current) {
-      audioRef.current.volume = value;
-    }
+  const prevTrack = () => {
+    if (tracks.length === 0) return;
+    const newIndex = currentTrackIndex <= 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    playTrack(newIndex);
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || isNaN(audioRef.current.duration)) return;
+    if (!audioRef.current || !duration || isNaN(duration)) return;
     
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const pos = (e.clientX - rect.left) / rect.width;
-    const newTime = audioRef.current.duration * pos;
+    const newTime = duration * pos;
     
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
@@ -369,37 +383,53 @@ const MusicPage = () => {
       const file = e.target.files[0];
       
       // Check if file is audio
-      if (!file.type.startsWith('audio/')) {
+      if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|ogg|m4a|aac)$/i)) {
         toast({
           title: "Invalid File Type",
-          description: "Please upload an audio file (MP3, WAV, OGG).",
+          description: "Please upload an audio file (MP3, WAV, OGG, M4A, AAC).",
           variant: "destructive",
         });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         return;
       }
       
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
+      // Check file size (15MB limit)
+      if (file.size > 15 * 1024 * 1024) {
         toast({
           title: "File Too Large",
-          description: "Please upload a file smaller than 10MB.",
+          description: "Please upload a file smaller than 15MB.",
           variant: "destructive",
         });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         return;
       }
       
-      // Set default title from filename
+      // Set default title from filename if not set
       if (!uploadTitle) {
         const fileName = file.name.split('.').slice(0, -1).join('.');
         setUploadTitle(fileName);
       }
+      
+      console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
     }
   };
   
   const handleSubmitUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to upload tracks.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!fileInputRef.current?.files || fileInputRef.current.files.length === 0) {
       toast({
         title: "No File Selected",
@@ -409,18 +439,29 @@ const MusicPage = () => {
       return;
     }
     
+    if (!uploadTitle.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Please enter a title for your track.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const file = fileInputRef.current.files[0];
     
     setIsUploading(true);
     try {
-      await uploadUserMusicTrack(user.id, uploadTitle, file);
+      console.log('Starting upload for:', uploadTitle);
+      
+      await uploadUserMusicTrack(user.id, uploadTitle.trim(), file);
       
       toast({
         title: "Upload Successful",
         description: "Your track has been uploaded successfully.",
       });
       
-      // Refresh tracks
+      // Refresh tracks list
       const musicTracks = await getAllMusicTracks();
       const formattedTracks: Track[] = musicTracks.map(track => ({
         id: track.id,
@@ -440,11 +481,15 @@ const MusicPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      console.log('Upload completed successfully');
+      
     } catch (error) {
-      console.error('Error uploading track:', error);
+      console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Upload Failed",
-        description: "Could not upload your track. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -453,7 +498,14 @@ const MusicPage = () => {
   };
   
   const handleDeleteTrack = async (trackId: string) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to delete tracks.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       await deleteUserMusicTrack(trackId, user.id);
@@ -467,49 +519,26 @@ const MusicPage = () => {
       setTracks(prev => prev.filter(track => track.id !== trackId));
       
       // If current track was deleted, stop playback
-      if (currentTrackIndex >= 0 && tracks[currentTrackIndex].id === trackId) {
+      if (currentTrackIndex >= 0 && tracks[currentTrackIndex]?.id === trackId) {
         if (audioRef.current) {
           audioRef.current.pause();
+          audioRef.current.src = '';
         }
         setIsPlaying(false);
         setCurrentTrackIndex(-1);
+        setProgress(0);
+        setCurrentTime(0);
+        setDuration(0);
       }
     } catch (error) {
-      console.error('Error deleting track:', error);
+      console.error('Delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Delete Failed",
-        description: "Could not delete your track. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
-  };
-  
-  // Render audio waveform animation
-  const renderWaveform = () => {
-    if (!isPlaying) return null;
-    
-    return (
-      <div className="flex justify-center items-end h-6 gap-[2px] mt-3">
-        {[...Array(16)].map((_, i) => {
-          const height = Math.random() * 16 + 4;
-          return (
-            <motion.div
-              key={i}
-              initial={{ height: 4 }}
-              animate={{ 
-                height: [4, height, 4],
-                transition: { 
-                  repeat: Infinity, 
-                  duration: 1 + Math.random() * 0.5,
-                  repeatType: 'reverse'
-                }
-              }}
-              className="bg-white w-1 rounded-full"
-            />
-          );
-        })}
-      </div>
-    );
   };
   
   return (
@@ -527,16 +556,17 @@ const MusicPage = () => {
           <div className="flex items-center justify-between mb-3">
             <div className="flex-1">
               <h3 className="font-semibold">
-                {currentTrackIndex >= 0 
+                {currentTrackIndex >= 0 && tracks[currentTrackIndex]
                   ? tracks[currentTrackIndex].title 
                   : 'Select a track'}
               </h3>
               <p className="text-sm opacity-80">
-                {currentTrackIndex >= 0 
+                {currentTrackIndex >= 0 && tracks[currentTrackIndex]
                   ? tracks[currentTrackIndex].artist || 'Relaxation music'
-                  : 'Relaxation music'}
+                  : 'Choose from available tracks'}
               </p>
               {error && <p className="text-xs text-red-300 mt-1">{error}</p>}
+              {isLoading && <p className="text-xs text-blue-300 mt-1">Loading audio...</p>}
             </div>
             <div className="flex items-center">
               <Volume2 className="w-5 h-5 mr-2" />
@@ -546,13 +576,7 @@ const MusicPage = () => {
                 max="1"
                 step="0.01"
                 value={volume}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  setVolume(value);
-                  if (audioRef.current) {
-                    audioRef.current.volume = value;
-                  }
-                }}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
                 className="w-20"
                 aria-label="Volume control"
               />
@@ -568,24 +592,16 @@ const MusicPage = () => {
           {/* Progress bar */}
           <div 
             className="w-full bg-white bg-opacity-20 h-2 rounded-full mb-4 cursor-pointer"
-            onClick={(e) => {
-              if (!audioRef.current || isNaN(audioRef.current.duration)) return;
-              
-              const progressBar = e.currentTarget;
-              const rect = progressBar.getBoundingClientRect();
-              const pos = (e.clientX - rect.left) / rect.width;
-              const newTime = audioRef.current.duration * pos;
-              
-              audioRef.current.currentTime = newTime;
-              setCurrentTime(newTime);
-            }}
+            onClick={handleProgressClick}
             aria-label="Track progress"
           >
             <div 
-              className="bg-white h-full rounded-full relative"
-              style={{ width: `${progress}%` }}
+              className="bg-white h-full rounded-full relative transition-all duration-300"
+              style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
             >
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-md"></div>
+              {progress > 0 && (
+                <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white rounded-full w-3 h-3 shadow-md"></div>
+              )}
             </div>
           </div>
           
@@ -593,21 +609,30 @@ const MusicPage = () => {
           <div className="flex justify-center items-center space-x-8">
             <button 
               onClick={prevTrack} 
-              className="focus:outline-none hover:opacity-80 transition-opacity"
+              className="focus:outline-none hover:opacity-80 transition-opacity disabled:opacity-50"
+              disabled={tracks.length === 0 || isLoading}
               aria-label="Previous track"
             >
               <SkipBack className="w-6 h-6" />
             </button>
             <button 
               onClick={togglePlayPause}
-              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors shadow-md"
+              className="bg-white text-mindboost-primary rounded-full w-12 h-12 flex items-center justify-center focus:outline-none hover:bg-opacity-90 transition-colors shadow-md disabled:opacity-50"
+              disabled={tracks.length === 0}
               aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-mindboost-primary border-t-transparent rounded-full animate-spin"></div>
+              ) : isPlaying ? (
+                <Pause className="w-6 h-6" />
+              ) : (
+                <Play className="w-6 h-6 ml-1" />
+              )}
             </button>
             <button 
               onClick={nextTrack} 
-              className="focus:outline-none hover:opacity-80 transition-opacity"
+              className="focus:outline-none hover:opacity-80 transition-opacity disabled:opacity-50"
+              disabled={tracks.length === 0 || isLoading}
               aria-label="Next track"
             >
               <SkipForward className="w-6 h-6" />
@@ -615,7 +640,7 @@ const MusicPage = () => {
           </div>
           
           {/* Sound wave animation when playing */}
-          {isPlaying && (
+          {isPlaying && !isLoading && (
             <div className="flex justify-center items-end h-6 gap-[2px] mt-3">
               {[...Array(16)].map((_, i) => {
                 const height = Math.random() * 16 + 4;
@@ -649,7 +674,13 @@ const MusicPage = () => {
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold">Upload New Track</h3>
               <button 
-                onClick={() => setShowUploadForm(false)}
+                onClick={() => {
+                  setShowUploadForm(false);
+                  setUploadTitle('');
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
                 className="text-gray-500 focus:outline-none"
                 aria-label="Close upload form"
               >
@@ -660,7 +691,7 @@ const MusicPage = () => {
             <form onSubmit={handleSubmitUpload}>
               <div className="mb-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Track Title
+                  Track Title *
                 </label>
                 <input
                   type="text"
@@ -669,30 +700,31 @@ const MusicPage = () => {
                   className="w-full p-2 border rounded-md"
                   placeholder="Enter track title"
                   required
+                  maxLength={100}
                 />
               </div>
               
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Audio File
+                  Audio File *
                 </label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="audio/*"
+                  accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
                   onChange={handleFileChange}
                   className="w-full p-2 border rounded-md"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: MP3, WAV, OGG (Max 10MB)
+                  Supported: MP3, WAV, OGG, M4A, AAC (Max 15MB)
                 </p>
               </div>
               
               <button
                 type="submit"
-                className="w-full bg-mindboost-primary text-white py-2 rounded-md hover:bg-mindboost-primary/90 transition-colors disabled:opacity-50"
-                disabled={isUploading}
+                className="w-full bg-mindboost-primary text-white py-2 rounded-md hover:bg-mindboost-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || !uploadTitle.trim()}
               >
                 {isUploading ? 'Uploading...' : 'Upload Track'}
               </button>
@@ -705,11 +737,11 @@ const MusicPage = () => {
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-mindboost-dark flex items-center">
               <Music className="w-5 h-5 mr-2 text-mindboost-primary" />
-              Relaxation Tracks
+              Available Tracks
             </h2>
             <button 
               onClick={handleUpload}
-              className="flex items-center text-sm text-mindboost-primary"
+              className="flex items-center text-sm text-mindboost-primary hover:text-mindboost-primary/80 transition-colors"
               aria-label="Upload new track"
             >
               <Upload className="w-4 h-4 mr-1" /> Upload
@@ -719,8 +751,8 @@ const MusicPage = () => {
           {/* Track loading state */}
           {loadingTracks ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mindboost-primary mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading tracks...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mindboost-primary mx-auto mb-2"></div>
+              <p className="text-gray-500">Loading tracks...</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -734,10 +766,10 @@ const MusicPage = () => {
                   <motion.div
                     key={track.id}
                     whileTap={{ scale: 0.98 }}
-                    className={`p-3 rounded-lg flex justify-between items-center cursor-pointer shadow-sm ${
+                    className={`p-3 rounded-lg flex justify-between items-center cursor-pointer shadow-sm transition-colors ${
                       currentTrackIndex === index
                         ? 'bg-mindboost-light text-mindboost-dark'
-                        : 'bg-white'
+                        : 'bg-white hover:bg-gray-50'
                     }`}
                     onClick={() => playTrack(index)}
                   >
@@ -747,12 +779,15 @@ const MusicPage = () => {
                           ? 'bg-mindboost-primary text-white'
                           : 'bg-gray-100'
                       }`}>
-                        {currentTrackIndex === index && isPlaying 
-                          ? <Pause className="w-5 h-5" /> 
-                          : <Play className="w-5 h-5 ml-0.5" />
-                        }
+                        {currentTrackIndex === index && isLoading ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : currentTrackIndex === index && isPlaying ? (
+                          <Pause className="w-5 h-5" />
+                        ) : (
+                          <Play className="w-5 h-5 ml-0.5" />
+                        )}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium line-clamp-1">{track.title}</p>
                         <p className="text-xs text-gray-500">
                           {track.artist || 'Relaxation Music'}
@@ -769,7 +804,7 @@ const MusicPage = () => {
                             e.stopPropagation();
                             handleDeleteTrack(track.id);
                           }}
-                          className="text-red-500 p-1 hover:bg-red-50 rounded-full"
+                          className="text-red-500 p-1 hover:bg-red-50 rounded-full transition-colors"
                           aria-label="Delete track"
                         >
                           <X className="w-4 h-4" />
